@@ -24,9 +24,9 @@ public abstract class BinanceAction {
 	/**
 	 * This method will update some data in the class.
 	 */
-	public abstract void execute();
+	protected abstract void execute();
 	
 	// Return something meaningful about what the action did
-	public abstract String parseServerResponse(Object response);
+	protected abstract String parseServerResponse(Object response);
 	
 }

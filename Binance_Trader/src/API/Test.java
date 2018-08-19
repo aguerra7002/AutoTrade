@@ -37,7 +37,6 @@ public class Test {
 		sa.execute();
 		SetupAction.getMinQty();
 		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
-		mfa.execute();
 		System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
 		BalanceHub hub = BalanceHub.getInstance();
 		hub.setValue(1000d, 0d);

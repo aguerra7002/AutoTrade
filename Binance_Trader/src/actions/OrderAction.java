@@ -96,7 +96,7 @@ public class OrderAction extends BinanceAction {
 	}
 
 	@Override
-	public String parseServerResponse(Object response) {
+	protected String parseServerResponse(Object response) {
 
 		HttpEntity entity = ((HttpResponse) response).getEntity();
 

@@ -25,11 +25,9 @@ public class BalanceHub {
 			usdValue = 0.0;
 			// Don't specify a symbol yet
 			priceGrabber = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
-			priceGrabber.execute();
 			return bh;
 		} 
-		// If we already have one, we should update the value.
-		priceGrabber.execute();
+		// If we already have one, just return that.
 		return bh;
 	}
 	
@@ -43,6 +41,9 @@ public class BalanceHub {
 	}
 	
 	public double getCryptoValue() {
+		// Note that here, when getting the crypto value, we call getCurrentPrice. 
+		// Never in BalanceHub do we manually update the price, that is handled 
+	    // exclusively in MarketFetchAction.
 		return cryptoQty * getCurrentPrice(Constants.BTC_USDT_MARKET_SYMBOL);
 	}
 	public double getValue() {
@@ -70,8 +71,6 @@ public class BalanceHub {
 	}
 	
 	
-	// TODO: Ideally, the MFA class should provide methods for easily getting data. 
-	// Right now it is retardedly stupid to do.
 	private double getCurrentPrice(String symbol) {
 		priceGrabber.setSymbol(symbol);
 		return priceGrabber.getCurrentPrice();

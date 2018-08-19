@@ -42,7 +42,7 @@ public class MarketFetchAction extends BinanceAction {
 	}
 
 	@Override
-	public void execute() {
+	protected void execute() {
 		Executor executor = Executor.newInstance();
 		//System.out.println(location + " " + currentSymbol);
 		try {
@@ -66,7 +66,7 @@ public class MarketFetchAction extends BinanceAction {
 	}
 
 	@Override
-	public String parseServerResponse(Object response) {
+	protected String parseServerResponse(Object response) {
 
 		try {
 			return ((Response) response).returnContent().asString();
@@ -95,6 +95,8 @@ public class MarketFetchAction extends BinanceAction {
 	}
 
 	public double getCurrentPrice() {
+		// To be sure we get the most current price, we do this.
+		execute();
 		// Get the most recent price (closing price of last index
 		return getPriceAtIndex(result.length() - 1);
 	}
@@ -104,6 +106,7 @@ public class MarketFetchAction extends BinanceAction {
 	}
 	
 	public JSONArray getResult() {
+		execute();
 		// TODO Auto-generated method stub
 		return result;
 	}
