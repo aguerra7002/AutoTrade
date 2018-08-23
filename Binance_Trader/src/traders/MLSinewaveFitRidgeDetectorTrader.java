@@ -94,7 +94,6 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 		 */
 		
 		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, NUM_DATA);
-		mfa.execute();
 		JSONArray result = mfa.getResult();
 		JSONArray sub;
 		double min = -1;
