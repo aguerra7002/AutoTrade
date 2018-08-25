@@ -37,17 +37,18 @@ public class BalanceHub {
 	}
 
 	public double getUSDValue() {
-		return usdValue;
+		return (double) Math.round(usdValue * 100) / 100;
 	}
 	
 	public double getCryptoValue() {
 		// Note that here, when getting the crypto value, we call getCurrentPrice. 
 		// Never in BalanceHub do we manually update the price, that is handled 
 	    // exclusively in MarketFetchAction.
-		return cryptoQty * getCurrentPrice(Constants.BTC_USDT_MARKET_SYMBOL);
+		return (double) Math.round(cryptoQty * 
+						getCurrentPrice(Constants.BTC_USDT_MARKET_SYMBOL) * 100) / 100d;
 	}
 	public double getValue() {
-		return usdValue + getCryptoValue();
+		return (double) Math.round(100 * (usdValue + getCryptoValue())) / 100d;
 	}
 	public double getCryptoQty() {
 		return cryptoQty;

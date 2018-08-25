@@ -28,7 +28,7 @@ public class SetupAction extends BinanceAction {
 	}
 
 	@Override
-	public void execute() {
+	protected void execute() {
 		// TODO Auto-generated method stub
 		Executor executor = Executor.newInstance();
 		//System.out.println(location + " " + marketSymbol);
@@ -50,7 +50,8 @@ public class SetupAction extends BinanceAction {
 		}
 	}
 	
-	public static double getMinQty() {
+	public double getMinQty() {
+		execute();
 		JSONArray arr = cur.getJSONArray("symbols");
 		JSONObject temp;
 		double minQty = -1;

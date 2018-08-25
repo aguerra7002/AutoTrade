@@ -28,19 +28,22 @@ import org.json.JSONObject;
 import actions.MarketFetchAction;
 import actions.SetupAction;
 import balance.BalanceHub;
+import server.WebServer;
 import traders.MLSinewaveFitRidgeDetectorTrader;
 
 public class Test {
 
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
 		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		sa.execute();
-		SetupAction.getMinQty();
+		sa.getMinQty();
 		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
 		System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
 		BalanceHub hub = BalanceHub.getInstance();
 		hub.setValue(1000d, 0d);
+		WebServer server = new WebServer();
+		server.startServer();
 		MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
+
 		trader.begin();
 		
 //		Executor executor = Executor.newInstance();

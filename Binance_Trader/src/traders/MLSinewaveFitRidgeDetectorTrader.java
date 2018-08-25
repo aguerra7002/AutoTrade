@@ -282,6 +282,9 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 		double prevError = -1;
 		double error = -1;
 		while (learning) {
+			if ((System.nanoTime() - startTime) / 1e9 > 30) {
+				System.out.println("Something is amiss.");
+			}
 			double sum_a = 0;
 			double sum_b = 0;
 			double sum_c = 0;
