@@ -10,6 +10,10 @@ public class BalanceHub {
 	// Singleton class as every user has a single Balance.
 	private static BalanceHub bh = null;
 	
+	// Variables for knowing what Value/Price we started at so we can calculate relative gains
+	private static double startValue;
+	private static double startPrice;
+	
 	private static MarketFetchAction priceGrabber = null;
 	
 	// !!!!!!!! TODO: Probably best to create a Balance Class to manage balances for individual markets.
@@ -23,6 +27,8 @@ public class BalanceHub {
 			bh = new BalanceHub();
 			cryptoQty = 0.0;
 			usdValue = 0.0;
+			startValue = -1.0d;
+			startPrice = -1.0d;
 			// Don't specify a symbol yet
 			priceGrabber = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
 			return bh;
@@ -34,6 +40,9 @@ public class BalanceHub {
 	public void setValue(double usdVal, double cryptoVal) {
 		usdValue = usdVal;
 		cryptoQty = cryptoVal / getCurrentPrice(Constants.BTC_USDT_MARKET_SYMBOL);
+		if (startValue == -1d) {
+			startValue = usdVal + cryptoVal;
+		}
 	}
 
 	public double getUSDValue() {
@@ -72,10 +81,21 @@ public class BalanceHub {
 	}
 	
 	
-	private double getCurrentPrice(String symbol) {
+	public double getCurrentPrice(String symbol) {
 		priceGrabber.setSymbol(symbol);
-		return priceGrabber.getCurrentPrice();
+		double price = priceGrabber.getCurrentPrice();
+		if (startPrice == -1) {
+			startPrice = price;
+		}
+		return price;
 	}
 	
+	public double getStartValue() {
+		return startValue;
+	}
+	
+	public double getStartPrice() {
+		return startPrice;
+	}
 	
 }

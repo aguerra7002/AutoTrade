@@ -11,6 +11,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import API.Constants;
 import balance.BalanceHub;
 
 // The tutorial can be found just here on the SSaurel's Blog : 
@@ -38,8 +39,16 @@ public class WebServer {
 		executor.scheduleAtFixedRate(new Thread() {
 			@Override
 			public void run() {
-				
-				setDisplayData("USD Value: $" + BalanceHub.getInstance().getValue());
+				BalanceHub hub = BalanceHub.getInstance();
+				double value = hub.getValue();
+				double price = hub.getCurrentPrice(Constants.BTC_USDT_MARKET_SYMBOL);
+				double startPrice = hub.getStartPrice();
+				double startValue = hub.getStartValue();
+				double valueChange = 100 * (value - startValue) / startValue;
+				double priceChange = 100 * (price - startPrice) / startPrice;
+				setDisplayData("USD Value: $" + value + "\n" +
+						"Value % Change: " + valueChange + "%\n" +
+						"Price % Change: " + priceChange + "%");
 			}
 		}, 0, 60, TimeUnit.SECONDS); // Update the value every 15 seconds.
 	}

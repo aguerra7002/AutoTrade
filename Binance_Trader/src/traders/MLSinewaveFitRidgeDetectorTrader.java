@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 
 import org.json.JSONArray;
 
@@ -23,13 +24,14 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 	// Trade at least a dollars worth of stuff, otherwise not worth it.
 	private static final double MIN_TRADE_VALUE_THRESHOLD = 1;
 	// TODO: Empirically determine this constant. Will affect how much we trade
-	private static final double STD_MARKET_DEVIATION = 12;
+	private static final double STD_MARKET_DEVIATION = 0.00001;
 	
 	//Sine wave is of the form f(x) = a sin(bx + c) + d. These are the constants we will try and learn.
 	private double a = 0;
 	private double b = 0;
 	private double c = 0;
 	private double d = 0;
+	private double e = 0; //***
 	/* 
 	 * This is the tolerance to which we minimize our error, in other words we will stop training when 
 	 * | oldError - newError | < this value.  
@@ -144,6 +146,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 				b = .1; // This is known to be a pretty good starting point for b
 			    c = 1; // TODO: Maybe in the future, implement a way to guess this value;
 				d = sum / NUM_DATA; // Average price across our 60 observations. Should key us in as to the correct d value.
+				e = (f[NUM_DATA - 1] - f[0]) / NUM_DATA; //*** Linear slope term
 				//System.out.println(a + " " + b + " " + c + " " + d);
 			//}
 			
@@ -179,7 +182,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 			// Create the OrderAction object.
 			OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, toTradeQty);
 			oa.execute();
-			System.out.println("Order executed, traded " + toTradeQty /*+ " Result: " + oa.getResult()*/);
+			System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			// Now that the order has executed, update our Vals for use in the next iteration.
 			hub.setValue(usdVal - toTradeVal, targetCryptoVal);
 			System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
@@ -283,12 +286,13 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 		double error = -1;
 		while (learning) {
 			if ((System.nanoTime() - startTime) / 1e9 > 30) {
-				System.out.println("Something is amiss.");
+				System.out.println("UH-OH " + a + "sin( " + b + "x + " + c + " ) + " + d + " + " + e + "x");//***
 			}
 			double sum_a = 0;
 			double sum_b = 0;
 			double sum_c = 0;
 			double sum_d = 0;
+			double sum_e = 0;//***
 			double error_sum = 0;
 			for (int i = f.length - pts; i < f.length; i++) {
 				// We sum all the previous errors.
@@ -299,12 +303,14 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 				sum_a += diff * Math.sin(b * x_i);
 				sum_b += diff * a * x_i * Math.cos(b * x_i + c);
 				sum_c += diff * a * Math.cos(b * x_i + c);
+				sum_e += diff * x_i;//***
 			}
 			// Don't forget to divide by pts at the end.
 			sum_a /= (double) pts;
 			sum_b /= (double) pts;
 			sum_c /= (double) pts;
 			sum_d /= (double) pts;
+			sum_e /= (double) pts;//***
 			// This is our error function (J(x))
 			error = error_sum * 1/2 * pts ; 
 			//addCSVEntry(error, 0d, 0d, 0d, "", f);
@@ -326,18 +332,19 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 			double temp_b = b - learningRate * .1 * sum_b; // Learning rate on this guy has to be very delicate as highly non-convex
 			double temp_c = c - learningRate * 100 * sum_c;
 			double temp_d = d - learningRate * 100 * sum_d;
+			double temp_e = e - learningRate * 100 * sum_e;//***
 		
 			// Now we can set these.
 			a = temp_a;
 			b = temp_b;
 			c = temp_c;
 		    d = temp_d;
-			
+			e = temp_e;//***
 			
 			
 		}
 		double time = (double)(System.nanoTime() - startTime) / 1e9;
-		System.out.println(a + "sin( " + b + "x + " + c + " ) + " + d + "   Error: " + error + "   Time: " + time + " seconds");
+		System.out.println(a + "sin( " + b + "x + " + c + " ) + " + d + " + " + e + "x   Error: " + error + "   Time: " + time + " seconds");//***
 		//addCSVEntry(0d, 0d, 0d, 0d, "", f);
 	}
 	
@@ -348,7 +355,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader {
 	 * nicer, we will make all the x's ints, and fit our curve to that.
 	 */
 	private double h (int x) { 
-		return a * Math.sin(b * x + c) + d;
+		return a * Math.sin(b * x + c) + d + e * x; //***
 	}
 	
 	/**

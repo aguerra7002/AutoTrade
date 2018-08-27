@@ -32,7 +32,7 @@ import server.WebServer;
 import traders.MLSinewaveFitRidgeDetectorTrader;
 
 public class Test {
-
+	
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
 		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
 		sa.getMinQty();
