@@ -1,7 +1,5 @@
 package balance;
 
-import org.json.JSONArray;
-
 import API.Constants;
 import actions.MarketFetchAction;
 

@@ -1,10 +1,7 @@
 package actions;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import org.apache.http.client.ClientProtocolException;
 
 public abstract class BinanceAction {
 	
