@@ -1,10 +1,12 @@
 package traders;
 
+import java.awt.Point;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Date;
 
 import org.json.JSONArray;
@@ -140,6 +142,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			double e = (f[NUM_DATA - 1] - f[0]) / NUM_DATA; //*** Linear slope term
 			// Want to not get proceed with training until training is done.
 			canProceed = false;
+			long trainTime = System.currentTimeMillis();
 			for (int i = 0; i < NUM_TRAINERS; i++) {
 				// very simple heuristic way to set up the trainers. May want to play with how we initialize.
 				trainers[i] = new LinearSineWaveGDRunnable(a, .05 * (i + 1), c, d, e, f, lastRidge);
@@ -148,16 +151,21 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 				trainers[i].start();
 				
 			}
+			System.out.println("Starting Training");
 			long startTime = System.nanoTime();
 			// Wait for at least some of the trainers to be done.
 			while (!canProceed) { // Can proceed is only set to true in the listener method
 				if (System.nanoTime() - startTime > TIMEOUT_NANO) {
 					killTrainers();
+					System.out.println("Timed out, not trading!");
 					return;
 				}
 			}
 			
 			double f_pred = LinearSineWaveGDRunnable.getBestPredictedPrice();
+			// Only now kill the trainers
+			killTrainers();
+			System.out.println("Training Done: " + ((double)(System.currentTimeMillis() - trainTime) / 1000d) + " seconds");
 			// Then find the difference between the new estimate and the last known val
 			double difference = f_pred - f[f.length - 1];
 			// Now, get the optimal balance given the difference.
@@ -250,8 +258,8 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 		} else {
 			// If it is the first one done and it is currently the best, then set we
 			// canProceed.
-			killTrainers(); // First kill the trainers
 			canProceed = true; // Move forward!
+			// Note that the trainers themselves are killed in the block they were created.
 		}
 		
 	}
@@ -259,7 +267,13 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	private void killTrainers() {
 		
 		for (LinearSineWaveGDRunnable trainer : trainers) {
-			trainer.interrupt(); // Don't need theses anymore, so kill them.
+			trainer.interrupt(); // Don't need theses anymore, so first interrupt them
+			try {
+				trainer.join(); // Joins the trainers into the current thread.
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
