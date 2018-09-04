@@ -7,6 +7,7 @@ import org.apache.http.client.ClientProtocolException;
 
 import actions.MarketFetchAction;
 import actions.SetupAction;
+import actions.TradeFetchAction;
 import balance.BalanceHub;
 import server.WebServer;
 import traders.MLSinewaveFitRidgeDetectorTrader;
@@ -14,18 +15,22 @@ import traders.MLSinewaveFitRidgeDetectorTrader;
 public class Test {
 	
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
-		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		sa.getMinQty();
-		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
-		System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
-		BalanceHub hub = BalanceHub.getInstance();
-		hub.setValue(1000d, 0d);
-		WebServer server = new WebServer();
-		server.startServer();
-		MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
+		//SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
+		//sa.getMinQty();
+		//MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
+		//System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
+		//BalanceHub hub = BalanceHub.getInstance();
+		//hub.setValue(1000d, 0d);
+		//WebServer server = new WebServer();
+		//server.startServer();
+		//MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
 
-		trader.begin();
+		//trader.begin();
 		
+		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
+		double density = tfa.getTradeDensity();
+		System.out.println(density);
+		// ****************** BELOW IS OLD STUFF ***************************
 //		Executor executor = Executor.newInstance();
 //		
 //		URI baseUri = new URIBuilder()
