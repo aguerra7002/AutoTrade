@@ -15,6 +15,7 @@ import API.Constants;
 import actions.MarketFetchAction;
 import actions.OrderAction;
 import balance.BalanceHub;
+import logging.Logger;
 import multithreading.ThreadCompleteListener;
 
 /* This class is a trader that aims to beat the market by 
@@ -55,31 +56,26 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	private boolean shouldWriteToCSV;
 	private boolean firstRun;
 	//TODO: Implement this to write trade history to CSV
-	private File csv;
+	private String csvMain = "out.csv";
 	
 	// Update once a minute;
 	private static final int UPDATE_RATE = 60;
 	int count = 0;
+	
+	// For logging
+	Logger logger;
+	
 	public MLSinewaveFitRidgeDetectorTrader(boolean writeToCSV) {
 		super(UPDATE_RATE);
 		shouldWriteToCSV = writeToCSV;
 		firstRun = true;
-		csv = new File("out.csv");
 		trainers = new LinearSineWaveGDRunnable[NUM_TRAINERS];
-		try {
-			FileWriter fw = new FileWriter(csv, true);
-			PrintWriter pw = new PrintWriter(fw);
-			StringBuilder sb = new StringBuilder();
-			sb.append("MarketPrice,Total Value,USD Value,Price Error,Traded?");
-			pw.println(sb.toString());
-			pw.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		Logger logger = new Logger();
+		logger.addFile(csvMain, true);
+		StringBuilder sb = new StringBuilder();
+		sb.append("MarketPrice,Total Value,USD Value,Price Error,Traded?");
+		logger.addLineToFile(sb, csvMain);
+		
 	}
 
 	@Override
@@ -394,34 +390,23 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	}
 	
 	private void addCSVEntry(double mp, double v, double usd, double df, String traded, double[] f) {
-		PrintWriter pw = null;
-		try {
-			FileWriter fw = new FileWriter(csv, true);
-			pw = new PrintWriter(fw);
+
+
 			StringBuilder sb = new StringBuilder();
 			sb.append(mp + "," + v + "," + usd + "," + df + "," + traded);
+			
+			// Different logging line.
 //			for (int i = 0; i < f.length; i++) {
 //				sb.append(i + "," + f[i] + "," + h(i) + "\n");
 //			}
-			//sb.append(mp); //except do error lol
-			if (pw != null) {
-				pw.println(sb.toString());
-				count++;
-				//System.out.println(count);
-			}
-			pw.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-//		if (count == 2) {
-//			pw.close();
-//			System.exit(1);
-//		}
+			
+			// Logs the error (maybe add another file to log this?)
+			//sb.append(mp); //except do error 
+			
+			logger.addLineToFile(sb, csvMain);
+			count++;
+			//System.out.println(count);
+
 	}
 
 }
