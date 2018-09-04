@@ -61,7 +61,7 @@ public class OrderAction extends BinanceAction {
 
 			String queryString = sellUriSigned.toString().substring(sellUriSigned.toString().indexOf('?') + 1);
 
-			HttpPost httppost = new HttpPost("https://api.binance.com/api/v3/order");
+			HttpPost httppost = new HttpPost("https://api.binance.com/api/v3/order/test");
 			httppost.setHeader(Constants.KEY_HEADER, Constants.PUBLIC_KEY);
 			httppost.setHeader("Content-Type", Constants.CONTENT_TYPE + "; " + Constants.ENCODING);
 			StringEntity se = new StringEntity(queryString);

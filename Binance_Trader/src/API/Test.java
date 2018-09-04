@@ -30,6 +30,8 @@ public class Test {
 		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
 		double density = tfa.getTradeDensity();
 		System.out.println(density);
+		
+		
 		// ****************** BELOW IS OLD STUFF ***************************
 //		Executor executor = Executor.newInstance();
 //		
