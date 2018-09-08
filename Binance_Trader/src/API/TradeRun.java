@@ -16,18 +16,22 @@ public class TradeRun {
 
 
 	public static void main(String[] args) {
+		
 		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
 		sa.getMinQty();
+		
 		MarketFetchAction mfa = new
 		MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
-		System.out.println("Starting trading... Start Price: " +
-		mfa.getCurrentPrice());
+		
+		System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
+		
 		BalanceHub hub = BalanceHub.getInstance();
 		hub.setValue(1000d, 0d);
+		
 		WebServer server = new WebServer();
 		server.startServer();
-		MLSinewaveFitRidgeDetectorTrader trader = new
-		MLSinewaveFitRidgeDetectorTrader(true);
+		
+		MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
 
 		trader.begin();
 

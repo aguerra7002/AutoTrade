@@ -1,12 +1,5 @@
 package traders;
 
-import java.awt.Point;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Date;
 
 import org.json.JSONArray;
@@ -66,12 +59,16 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	Logger logger;
 	
 	public MLSinewaveFitRidgeDetectorTrader(boolean writeToCSV) {
-		super(UPDATE_RATE);
+		super(UPDATE_RATE, false); // True indicates we are testing.
+		
 		shouldWriteToCSV = writeToCSV;
 		firstRun = true;
+		
 		trainers = new LinearSineWaveGDRunnable[NUM_TRAINERS];
-		Logger logger = new Logger();
+		
+		logger = new Logger();
 		logger.addFile(csvMain, true);
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("MarketPrice,Total Value,USD Value,Price Error,Traded?");
 		logger.addLineToFile(sb, csvMain);
@@ -80,7 +77,6 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 
 	@Override
 	protected void update() {
-		// TODO Auto-generated method stub
 		
 		/*
 		 *  One thing that could potentially be really cool to add would be a 
@@ -391,7 +387,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	
 	private void addCSVEntry(double mp, double v, double usd, double df, String traded, double[] f) {
 
-
+			
 			StringBuilder sb = new StringBuilder();
 			sb.append(mp + "," + v + "," + usd + "," + df + "," + traded);
 			
@@ -402,10 +398,8 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			
 			// Logs the error (maybe add another file to log this?)
 			//sb.append(mp); //except do error 
-			
 			logger.addLineToFile(sb, csvMain);
 			count++;
-			//System.out.println(count);
 
 	}
 

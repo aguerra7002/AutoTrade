@@ -5,6 +5,8 @@ import java.net.URISyntaxException;
 
 import org.apache.http.client.ClientProtocolException;
 
+import com.sun.javafx.logging.Logger;
+
 import actions.MarketFetchAction;
 import actions.SetupAction;
 import actions.TradeFetchAction;
@@ -27,10 +29,19 @@ public class Test {
 
 		//trader.begin();
 		
-		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		double density = tfa.getTradeDensity();
-		System.out.println(density);
+//		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
+//		double density = tfa.getTradeDensity();
+//		System.out.println(density);
 		
+		StringBuilder sb = new StringBuilder();
+		sb.append("TESTING");
+		logging.Logger log = new logging.Logger();
+		log.addFile("test.csv", true);
+		log.addLineToFile(sb, "test.csv");
+		System.out.println("One down");
+		StringBuilder sb1 = new StringBuilder();
+		sb1.append("SECOND");
+		log.addLineToFile(sb1, "test.csv");
 		
 		// ****************** BELOW IS OLD STUFF ***************************
 //		Executor executor = Executor.newInstance();

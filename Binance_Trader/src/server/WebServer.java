@@ -57,7 +57,7 @@ public class WebServer {
 		server = null;
 		try {
 			
-			server = HttpServer.create(new InetSocketAddress(8080), 0);
+			server = HttpServer.create(new InetSocketAddress(8000), 0);
 			server.createContext("/test", new MyHandler());
 			server.setExecutor(null); // creates a default executor
 			

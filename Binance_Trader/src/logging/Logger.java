@@ -8,20 +8,18 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 
 public class Logger {
-	
-	FileWriter fw;
-	PrintWriter pw;
+
 	// This allows for a given class to log many things at once, all in different files.
 	HashMap<String, File> csvFiles;
 	public Logger() {
 		csvFiles = new HashMap<String, File>();
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				closeWriters();
-				// TODO: Clean up the other stuff here.
-			}
-		});
+//		Runtime.getRuntime().addShutdownHook(new Thread() {
+//			@Override
+//			public void run() {
+//				closeWriters();
+//				// TODO: Clean up the other stuff here.
+//			}
+//		});
 	}
 	
 	/**
@@ -33,37 +31,28 @@ public class Logger {
 		File f = new File(filename);
 		if (f.isFile() && createNew) {
 			f.delete();
-			try {
-				f.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				f.createNewFile();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 		}
 		csvFiles.put(filename, f);
 	}
 	
 	public void addLineToFile(StringBuilder line, String filename) {
 		try {
-			fw = new FileWriter(csvFiles.get(filename));
-			pw = new PrintWriter(fw);
+			File f = csvFiles.get(filename);
+			FileWriter fw = new FileWriter(f, true);
+			PrintWriter pw = new PrintWriter(fw);
 			pw.println(line.toString());
 			pw.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	
-	
-	private void closeWriters() {
-		try {
 			fw.close();
-			pw.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
+
 }
