@@ -28,7 +28,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	// and confidence of global minimum
 	private static final int NUM_TRAINERS = 4;
 	// Here we actually declare the trainers.
-	LinearSineWaveGDRunnable[] trainers;
+	LinearSineWaveGDTrainer[] trainers;
 	// boolean set to wait on until training is finished or we timeout.
 	private volatile boolean canProceed;
 	// boolean that says we should just return, occurs during training timeout
@@ -64,7 +64,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 		shouldWriteToCSV = writeToCSV;
 		firstRun = true;
 		
-		trainers = new LinearSineWaveGDRunnable[NUM_TRAINERS];
+		trainers = new LinearSineWaveGDTrainer[NUM_TRAINERS];
 		
 		logger = new Logger();
 		logger.addFile(csvMain, true);
@@ -137,7 +137,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			long trainTime = System.currentTimeMillis();
 			for (int i = 0; i < NUM_TRAINERS; i++) {
 				// very simple heuristic way to set up the trainers. May want to play with how we initialize.
-				trainers[i] = new LinearSineWaveGDRunnable(a, .05 * (i + 1), c, d, e, f, lastRidge);
+				trainers[i] = new LinearSineWaveGDTrainer(a, .05 * (i + 1), c, d, e, f, lastRidge);
 				trainers[i].setName("Trainer_" + i);
 				trainers[i].addListener(this); // Important step!, make sure we notify here when thread finishes
 				trainers[i].start();
@@ -154,7 +154,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 				}
 			}
 			
-			double f_pred = LinearSineWaveGDRunnable.getBestPredictedPrice();
+			double f_pred = LinearSineWaveGDTrainer.getBestPredictedPrice();
 			// Only now kill the trainers
 			killTrainers();
 			System.out.println("Training Done: " + ((double)(System.currentTimeMillis() - trainTime) / 1000d) + " seconds");
@@ -244,8 +244,8 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	public void notifyOfThreadComplete(Thread thread) {
 		// TODO Auto-generated method stub
 		// All the threads we use are of this type, so we may use this
-		thread = (LinearSineWaveGDRunnable) thread;
-		if (!LinearSineWaveGDRunnable.getBestThread().equals(thread.getName())) {
+		thread = (LinearSineWaveGDTrainer) thread;
+		if (!LinearSineWaveGDTrainer.getBestThread().equals(thread.getName())) {
 			// If we are here, a thread finished but it is the wrong convex pool, so ignore it
 		} else {
 			// If it is the first one done and it is currently the best, then set we
@@ -258,14 +258,15 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	
 	private void killTrainers() {
 		
-		for (LinearSineWaveGDRunnable trainer : trainers) {
+		for (LinearSineWaveGDTrainer trainer : trainers) {
 			trainer.interrupt(); // Don't need theses anymore, so first interrupt them
-			try {
-				trainer.join(); // Joins the trainers into the current thread.
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			// Before I was trying to join the threads but I don't want to do that at all as this is a blocked step.
+//			try {
+//				trainer.join(); // Joins the trainers into the current thread.
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 		}
 	}
 	

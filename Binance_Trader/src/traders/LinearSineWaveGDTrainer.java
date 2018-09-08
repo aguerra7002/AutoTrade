@@ -2,7 +2,7 @@ package traders;
 
 import multithreading.NotifyingThread;
 
-public class LinearSineWaveGDRunnable extends NotifyingThread {
+public class LinearSineWaveGDTrainer extends NotifyingThread {
 	
 	
 	/* 
@@ -11,6 +11,9 @@ public class LinearSineWaveGDRunnable extends NotifyingThread {
 	 * TODO: Empirically find a good value for this.
 	 */ 
 	private static double DONE_LEARNING = .001;
+	
+	// This is something that will stop the thread in the event of a "divergence" 
+	private static final long THREAD_STOP_TIME_SEC = 30;
 	
 	/* 
 	 * Not declaring as final because I may want to add something that adjusts the learning rate
@@ -51,7 +54,7 @@ public class LinearSineWaveGDRunnable extends NotifyingThread {
 	// Boolean for knowing if we finished training.
 	private volatile boolean finished = false;
 	
-	public LinearSineWaveGDRunnable(double a, double b, double c, double d, double e) {
+	public LinearSineWaveGDTrainer(double a, double b, double c, double d, double e) {
 		// Initial values of a, b, c, and d
 		this.a = a;
 		this.b = b;
@@ -60,7 +63,7 @@ public class LinearSineWaveGDRunnable extends NotifyingThread {
 		this.e = e;
 	}
 	
-	public LinearSineWaveGDRunnable(double a, double b, double c, double d, double e, double[] f, int lastRidge) {
+	public LinearSineWaveGDTrainer(double a, double b, double c, double d, double e, double[] f, int lastRidge) {
 		this(a, b ,c, d, e);
 		this.f = f;
 		this.lastRidge = lastRidge;
@@ -120,7 +123,7 @@ public class LinearSineWaveGDRunnable extends NotifyingThread {
 		boolean learning = true;
 		// Initially give error an invalid value.
 		double prevError = -1;
-		while (learning) {
+		while (learning && (System.nanoTime() - startTime < THREAD_STOP_TIME_SEC * 1e9)) {
 //			if ((System.nanoTime() - startTime) / 1e9 > 30) {
 //				System.out.println("UH-OH " + a + "sin( " + b + "x + " + c + " ) + " + d + " + " + e + "x");//***
 //			}
