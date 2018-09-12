@@ -5,15 +5,6 @@ import java.net.URISyntaxException;
 
 import org.apache.http.client.ClientProtocolException;
 
-import com.sun.javafx.logging.Logger;
-
-import actions.MarketFetchAction;
-import actions.SetupAction;
-import actions.TradeFetchAction;
-import balance.BalanceHub;
-import server.WebServer;
-import traders.MLSinewaveFitRidgeDetectorTrader;
-
 public class Test {
 	
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {

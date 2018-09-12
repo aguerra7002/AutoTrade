@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -13,6 +14,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import API.Constants;
 import balance.BalanceHub;
+import traders.Trader;
 
 // The tutorial can be found just here on the SSaurel's Blog : 
 // https://www.ssaurel.com/blog/create-a-simple-http-web-server-in-java
@@ -46,11 +48,12 @@ public class WebServer {
 				double startValue = hub.getStartValue();
 				double valueChange = 100 * (value - startValue) / startValue;
 				double priceChange = 100 * (price - startPrice) / startPrice;
-				setDisplayData("USD Value: $" + value + "\n" +
+				setDisplayData(new Date(Trader.getCurrentTimestamp()) + "\n" +
+						"USD Value: $" + value + "\n" +
 						"Value % Change: " + valueChange + "%\n" +
 						"Price % Change: " + priceChange + "%");
 			}
-		}, 0, 60, TimeUnit.SECONDS); // Update the value every 15 seconds.
+		}, 0, 10, TimeUnit.SECONDS); // Update the value every 10 seconds.
 	}
 
 	public void startServer() {

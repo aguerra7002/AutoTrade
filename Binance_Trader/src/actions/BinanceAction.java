@@ -8,8 +8,17 @@ public abstract class BinanceAction {
 	private static final String BASE_ENDPOINT = "https://api.binance.com/";
 	protected URI location;
 	
-	// 
+//	// This is June 1, 2018. Probably fine.
+//	protected static final long DEFAULT_STARTING_TIMESTAMP_MS =  1527811200; 
+//	// This will only be used if going in test mode 
+	protected static long currentTimestamp;
+//	
+//	// boolean to determine if we are in test mode.
+	protected static boolean testMode;
+	
+	
 	public BinanceAction(String endpoint) {
+
 		try {
 			location = new URI(BASE_ENDPOINT + endpoint);
 		} catch (URISyntaxException e) {
@@ -25,5 +34,13 @@ public abstract class BinanceAction {
 	
 	// Return something meaningful about what the action did
 	protected abstract String parseServerResponse(Object response);
+	
+	public static void setTimestamp(long timestamp) {
+		currentTimestamp = timestamp;
+	}
+	
+	public static void setTestMode(boolean isTestMode) {
+		testMode = isTestMode;
+	}
 	
 }

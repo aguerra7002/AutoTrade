@@ -30,10 +30,15 @@ public class TradeFetchAction extends BinanceAction {
 
 		try {
 
-			URI baseUri = new URIBuilder(location)
-					.setParameter("symbol", marketSymbol)
-					.build();
-
+			URIBuilder base = new URIBuilder(location)
+					.setParameter("symbol", marketSymbol);
+			
+			if (testMode) {
+				base = base.setParameter("startTime", currentTimestamp + "");
+			}
+			
+			URI baseUri = base.build();
+			
 			String baseReq = parseServerResponse(executor.execute(Request.Get(baseUri)));
 			
 			//System.out.println(baseReq);

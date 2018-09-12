@@ -1,8 +1,11 @@
 package traders;
 
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import actions.BinanceAction;
 
 /* This class handles all the timing/ update stuff for the trader
  * but still leaves a lot to be done in the individual traders which
@@ -10,13 +13,15 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class Trader implements Runnable {
 	
-	// TODO: Find out a good value for this number. (Probably
-	protected static final long DEFAULT_STARTING_TIMESTAMP_MS =  1527811200; // This is June 1, 2018. Probably fine.
-	// This will only be used if going in test mode 
-	protected static double currentTimestamp;
+	// This is June 1, 2018. Probably fine.
+	protected static final long DEFAULT_STARTING_TIMESTAMP_MS = 1527811200000l;
 	
-	// boolean to determine if we are in test mode.
-	protected boolean testMode;
+	// This will be the updated currentTimestamp. 
+	protected static long currentTimestamp;
+	
+	// This will determine if we are in testMode
+	protected static boolean testMode;
+	
 	
 	// Time between calling update()
 	int updateRateSec;
@@ -26,10 +31,12 @@ public abstract class Trader implements Runnable {
 	
 	public Trader(int updateRateSecs, boolean isTestMode) {
 		this.updateRateSec = updateRateSecs;
-		this.testMode = isTestMode;
-		if (this.testMode) {
+		testMode = isTestMode;
+		BinanceAction.setTestMode(testMode);
+		if (testMode) {
 			// Set default timestamp
 			currentTimestamp = DEFAULT_STARTING_TIMESTAMP_MS;
+			BinanceAction.setTimestamp(currentTimestamp);
 		}
 	}
 	
@@ -44,7 +51,7 @@ public abstract class Trader implements Runnable {
 				update(); 
 				// Then advance the time to the next update point and go again.
 				currentTimestamp += (updateRateSec * 1000);
-				
+				BinanceAction.setTimestamp(currentTimestamp);
 				System.out.println("Cycle Time: " + ((double) (System.currentTimeMillis() - start) / 1000d) + " seconds");
 			}
 			
@@ -72,6 +79,10 @@ public abstract class Trader implements Runnable {
 	
 	public int getUpdateRate() {
 		return updateRateSec;
+	}
+	
+	public static long getCurrentTimestamp() {
+		return currentTimestamp;
 	}
 	
 	public void setTimeStamp(long timestamp) {

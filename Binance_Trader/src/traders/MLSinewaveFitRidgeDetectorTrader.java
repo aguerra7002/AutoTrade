@@ -31,8 +31,6 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	LinearSineWaveGDTrainer[] trainers;
 	// boolean set to wait on until training is finished or we timeout.
 	private volatile boolean canProceed;
-	// boolean that says we should just return, occurs during training timeout
-	private volatile boolean shouldReturn;
 	/* 
 	 * This number has to be wisely chosen. Too big and we will be using expired/obsolete data to predict, 
 	 * not to mention the extra calculations necessary. However, if we make it too small, our estimate will 
@@ -59,7 +57,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	Logger logger;
 	
 	public MLSinewaveFitRidgeDetectorTrader(boolean writeToCSV) {
-		super(UPDATE_RATE, false); // True indicates we are testing.
+		super(UPDATE_RATE, true); // true indicates we are testing.
 		
 		shouldWriteToCSV = writeToCSV;
 		firstRun = true;
@@ -182,6 +180,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			// Determine to buy or sell.
 			boolean isBuyOrder = toTradeVal > 0 ? true : false;
 			// Create the OrderAction object.
+			
 			OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, toTradeQty);
 			oa.execute();
 			System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);

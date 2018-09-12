@@ -46,19 +46,22 @@ public class MarketFetchAction extends BinanceAction {
 		Executor executor = Executor.newInstance();
 		//System.out.println(location + " " + currentSymbol);
 		try {
-
-			URI baseUri = new URIBuilder(location)
+			URIBuilder base = new URIBuilder(location)
 					.setParameter("symbol", currentSymbol)
-					.setParameter("interval", "1m")
 					.setParameter("limit", limit + "")
-					.build();
-
-			String baseReq = parseServerResponse(executor.execute(Request.Get(baseUri)));
+					.setParameter("interval", "1m");
 			
+			// If in test mode we need to get the data from a certain timestamp.
+			if (testMode) {
+				base.setParameter("startTime", currentTimestamp + "");
+			} 
+								
+
+			URI baseUri = base.build();
+			String baseReq = parseServerResponse(executor.execute(Request.Get(baseUri)));
 			//System.out.println(baseReq);
 			result = new JSONArray(baseReq);
 			
-
 		} catch (URISyntaxException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
