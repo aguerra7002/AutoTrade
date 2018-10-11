@@ -175,6 +175,12 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 				if (shouldWriteToCSV) addCSVEntry(mfa.getCurrentPrice(), hub.getValue(), hub.getUSDValue(), difference, "N", f);
 				return;
 			}
+			/*
+			 * TODO: Here (or in this area of code, we need to add functionality to account for trading fees. 
+			 * This should not be too hard to do but must be done correctly if we want a chance at being profitable.
+			 * 
+			 */
+			
 			// Now we want to carry out the trade. First, get the amount necessary needed to buy/sell.
 			double toTradeQty = Math.abs(((double)((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
 			// Determine to buy or sell.
