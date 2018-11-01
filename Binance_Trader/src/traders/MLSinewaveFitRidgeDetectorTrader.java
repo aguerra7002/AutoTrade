@@ -23,6 +23,9 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	// TODO: Empirically determine this constant. Will affect how much we trade
 	private static final double STD_MARKET_DEVIATION = 0.00001;
 	
+	// Trade fee percentage
+	private static final double TRADE_FEE_RATE = 0.00075;
+	
 	private static final double TIMEOUT_NANO = 5e9; // 5 seconds given for training.
 	// How many trainers should be going at the optimization problem Tradeoff between speed 
 	// and confidence of global minimum
@@ -167,19 +170,28 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			double cryptoVal = hub.getCryptoValue();
 			// Now, we want to find our target valuation so we can calculate the difference and trade.
 			double targetCryptoVal = (usdVal + cryptoVal) * balanceRisk;
+			// Also want to get target USD Val as it will be useful for fee calculations
+			double targetUSDVal = (usdVal + cryptoVal) - targetCryptoVal;
 			// Find the difference between our target 
 			double toTradeVal = targetCryptoVal - cryptoVal;
 			// If it tells us to trade an insignificant amount, then just stop.
+			
+			
 			if (Math.abs(toTradeVal) < MIN_TRADE_VALUE_THRESHOLD) {
 				System.out.println(toTradeVal); 
 				if (shouldWriteToCSV) addCSVEntry(mfa.getCurrentPrice(), hub.getValue(), hub.getUSDValue(), difference, "N", f);
 				return;
 			}
-			/*
-			 * TODO: Here (or in this area of code, we need to add functionality to account for trading fees. 
-			 * This should not be too hard to do but must be done correctly if we want a chance at being profitable.
-			 * 
-			 */
+			
+			// This is an expression that calculates what our predicted profit is without accounting for trading fees.
+			double predictedGrossProfit = (targetUSDVal - usdVal) + (f_pred - f[NUM_DATA - 1]) * (targetCryptoVal - cryptoVal);
+			double fees = toTradeVal * TRADE_FEE_RATE;
+			// See if the fees put us in the red, if they do, then don't trade
+			if (predictedGrossProfit - fees <= 0) {
+				if (shouldWriteToCSV) addCSVEntry(mfa.getCurrentPrice(), hub.getValue(), hub.getUSDValue(), difference, "A", f);
+				return;
+			}
+			// If we made it here, then we are going through with the trade...
 			
 			// Now we want to carry out the trade. First, get the amount necessary needed to buy/sell.
 			double toTradeQty = Math.abs(((double)((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
