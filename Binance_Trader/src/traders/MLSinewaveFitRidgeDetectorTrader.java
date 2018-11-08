@@ -127,10 +127,22 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			// TODO: Implement
 			if (RidgeDetector.isUpRidge()) {
 				// Trade like an up-ridge (buy the crypto)
-				
+				BalanceHub hub = BalanceHub.getInstance();
+				// The amount we buy will deplete all our usd value, we are putting it all into crypto
+				double toTradeQty = hub.getUSDValue() / mfa.getCurrentPrice();
+				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, toTradeQty);
+				oa.execute();
+				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			} else {
 				// Trade like a down-ridge (sell the crypto)
-				
+				BalanceHub hub = BalanceHub.getInstance();
+				// We just want to sell the qty of crypto we have, convert all to usd.
+				double toTradeQty = hub.getCryptoQty();
+				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, toTradeQty);
+				oa.execute();
+				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			}
 			
 			
@@ -224,6 +236,11 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			 * happen here if there is margin to reap) we will do nothing. This sort of 
 			 * represents an unstable point in the market. It could suddenly get stable, or it 
 			 * could go immediately go back into a ridge, we don't really know.
+			 */
+			
+			/*
+			 * To add to the above comment, I think here the best move might be to do a 50/50 split on trading so we halve our risk.
+			 * This would be very fast/easy to implement...
 			 */
 		}
 		
