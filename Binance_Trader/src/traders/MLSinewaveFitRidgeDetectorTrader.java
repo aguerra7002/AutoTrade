@@ -122,32 +122,17 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 		// Otherwise, it will return the number of minutes (x vals) since last ridge 
 		double lastRidge = RidgeDetector.getLastRidge();
 		
-		if (lastRidge <= 0d) {
-			// Trade like a ridge 
-			// TODO: Implement
-			if (RidgeDetector.isUpRidge()) {
-				// Trade like an up-ridge (buy the crypto)
-				BalanceHub hub = BalanceHub.getInstance();
-				// The amount we buy will deplete all our usd value, we are putting it all into crypto
-				double toTradeQty = hub.getUSDValue() / mfa.getCurrentPrice();
-				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, toTradeQty);
-				oa.execute();
-				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
-			} else {
-				// Trade like a down-ridge (sell the crypto)
-				BalanceHub hub = BalanceHub.getInstance();
-				// We just want to sell the qty of crypto we have, convert all to usd.
-				double toTradeQty = hub.getCryptoQty();
-				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, toTradeQty);
-				oa.execute();
-				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
-			}
+		if (lastRidge == 0d) {
 			
+			// If the code reaches here, we don't trade here, as we will let the RidgeDetector do the trading...
+			// This will fully sync the two traders. Note that the ridge detector has "priority" over this trader, 
+			// and rightfully so, as it is a more urgent/profitable thing to have happen.
 			
 		} else if (lastRidge >= MIN_DATA_TO_TRADE){
-			// Indicates we have a cosine like response.
+			/*
+			 * If we are here, we are "normal" market conditions, or in other words, we can probably fit a nice curve
+			 * to the market data and extrapolate
+			 */
 			
 			// This will update a, b, c, d
 			double a = .5 * (max - min); // good heuristic formula for amplitude.

@@ -6,6 +6,8 @@ import org.json.JSONArray;
 
 import API.Constants;
 import actions.MarketFetchAction;
+import actions.OrderAction;
+import balance.BalanceHub;
 import logging.Logger;
 
 /* 
@@ -33,7 +35,6 @@ public class RidgeDetector extends Trader {
 	Logger ridgeLogger;
 	
 	private static double lastRidge = -1;
-	private static boolean isUpRidge = false;
 
 	public RidgeDetector(boolean isTestMode) {
 		super(UPDATE_RATE_SEC, isTestMode);
@@ -84,9 +85,27 @@ public class RidgeDetector extends Trader {
 			// Because we are in a ridge, the time since the last ridge is 0
 			lastRidge = 0; 
 			// Next, we will determine if it is an up ridge or a down ridge. Very simple to do.
-			isUpRidge = f[NUM_DATA] > mean ? true : false;
+			boolean isUpRidge = f[NUM_DATA] > mean ? true : false;
 			
-			
+			if (isUpRidge) {
+				// Trade like an up-ridge (buy the crypto)
+				BalanceHub hub = BalanceHub.getInstance();
+				// The amount we buy will deplete all our usd value, we are putting it all into crypto
+				double toTradeQty = hub.getUSDValue() / mfa.getCurrentPrice();
+				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, toTradeQty);
+				oa.execute();
+				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
+			} else {
+				// Trade like a down-ridge (sell the crypto)
+				BalanceHub hub = BalanceHub.getInstance();
+				// We just want to sell the qty of crypto we have, convert all to usd.
+				double toTradeQty = hub.getCryptoQty();
+				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, toTradeQty);
+				oa.execute();
+				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
+			}
 			
 		} else {
 			// If we have no ridge, we can add to the time since the last ridge (in minutes)
@@ -104,15 +123,5 @@ public class RidgeDetector extends Trader {
 		return lastRidge; 
 		
 	}
-	
-	// Returns the status of the last ridge as being an up or down. Default is down, so model should be careful here
-	public static boolean isUpRidge() {
-		
-		return isUpRidge; 
-		
-	}
-	
-
-
 
 }
