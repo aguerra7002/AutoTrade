@@ -33,6 +33,7 @@ public class RidgeDetector extends Trader {
 	Logger ridgeLogger;
 	
 	private static double lastRidge = -1;
+	private static boolean isUpRidge = false;
 
 	public RidgeDetector(boolean isTestMode) {
 		super(UPDATE_RATE_SEC, isTestMode);
@@ -82,7 +83,9 @@ public class RidgeDetector extends Trader {
 			ridgeLogger.addLineToFile(sb, csvMain);
 			// Because we are in a ridge, the time since the last ridge is 0
 			lastRidge = 0; 
-			// Here we need to trade as if we are in a ridge.
+			// Next, we will determine if it is an up ridge or a down ridge. Very simple to do.
+			isUpRidge = f[NUM_DATA] > mean ? true : false;
+			
 			
 			
 		} else {
@@ -97,11 +100,17 @@ public class RidgeDetector extends Trader {
 	
 	// This method should return the number of minutes since the last ridge, or 0 if a ridge is currently happening. 
 	public static double getLastRidge() {
-		// TODO: Implement this.
 		
-		return lastRidge; // Default number
+		return lastRidge; 
+		
 	}
 	
+	// Returns the status of the last ridge as being an up or down. Default is down, so model should be careful here
+	public static boolean isUpRidge() {
+		
+		return isUpRidge; 
+		
+	}
 	
 
 

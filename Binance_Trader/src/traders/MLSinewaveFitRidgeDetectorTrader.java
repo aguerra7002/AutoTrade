@@ -45,7 +45,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	 * ridge that we will start trading again. We want to wait in case another ridge happens right after as the 
 	 * market is probably unstable, but we also need enough data points to produce a good periodic model.
 	 */
-	private static final int MIN_DATA_TO_TRADE = 10;
+	private static final int MIN_DATA_TO_TRADE = 5;
 	
 	private boolean shouldWriteToCSV;
 	private boolean firstRun;
@@ -120,10 +120,20 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 		//double diff = f[f.length - 1] - f[f.length - 2];
 		// This function will return -1 if it predicts a ridge will occur. 
 		// Otherwise, it will return the number of minutes (x vals) since last ridge 
-		int lastRidge = getRidgeIfOneExists(f);
+		double lastRidge = RidgeDetector.getLastRidge();
 		
-		if (lastRidge == -1) {
-			// Trade like a ridge
+		if (lastRidge <= 0d) {
+			// Trade like a ridge 
+			// TODO: Implement
+			if (RidgeDetector.isUpRidge()) {
+				// Trade like an up-ridge (buy the crypto)
+				
+			} else {
+				// Trade like a down-ridge (sell the crypto)
+				
+			}
+			
+			
 		} else if (lastRidge >= MIN_DATA_TO_TRADE){
 			// Indicates we have a cosine like response.
 			
@@ -138,7 +148,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			long trainTime = System.currentTimeMillis();
 			for (int i = 0; i < NUM_TRAINERS; i++) {
 				// very simple heuristic way to set up the trainers. May want to play with how we initialize.
-				trainers[i] = new LinearSineWaveGDTrainer(a, .05 * (i + 1), c, d, e, f, lastRidge);
+				trainers[i] = new LinearSineWaveGDTrainer(a, .05 * (i + 1), c, d, e, f, (int) lastRidge);
 				trainers[i].setName("Trainer_" + i);
 				trainers[i].addListener(this); // Important step!, make sure we notify here when thread finishes
 				trainers[i].start();
@@ -276,131 +286,10 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	private void killTrainers() {
 		
 		for (LinearSineWaveGDTrainer trainer : trainers) {
+			
 			trainer.interrupt(); // Don't need theses anymore, so first interrupt them
-			// Before I was trying to join the threads but I don't want to do that at all as this is a blocked step.
-//			try {
-//				trainer.join(); // Joins the trainers into the current thread.
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+			
 		}
-	}
-	
-
-//	private void trainModel(double[] f, int pts) {
-//		long startTime = System.nanoTime();
-//		// Before we do our fancy GD, we need to do our less fancy `find b by guess and check`
-////		double MIN = -.3;
-////		double MAX = .3;
-////		int NUM_DATA = 200;
-////		double INCREMENT = (MAX - MIN) / (NUM_DATA - 1);
-////		double lowestError = -1;
-////		double lowestYieldingB = -1;
-////		for (double currentB = MIN; currentB <= MAX; currentB += INCREMENT) {
-////			// Technically this won't calculate error, but will be a linear multiple of it (assuming pts is constant, which for testing it is.
-////			double raw = 0; 
-////			for (int i = f.length - pts; i < f.length; i++) {
-////				raw += Math.pow((Math.sin(currentB * i) - f[i]), 2);
-////			}
-////			if (lowestError < 0 || raw < lowestError) {
-////				lowestError = raw;
-////				lowestYieldingB = currentB;
-////			}
-////
-////		} 
-////		// Finally, we have the b that is "close enough". So we set it to this.
-////		b = lowestYieldingB;
-//		/*
-//		 * The general form for a parameter in gradient descent is
-//		 * a_{j+1} = a_j - r * D_j J(a) 
-//		 * where a_j is the j-th generation of an arbitrary parameter,
-//		 * r is the learning rate, D_j is the partial derivative with 
-//		 * respect to the j-th parameter (a_j), and J is the error function
-//		 */
-//		
-//		// The x value we use is the most recent price val.
-//		//double x = f[f.length - 1];
-//		boolean learning = true;
-//		// Initially give error an invalid value.
-//		double prevError = -1;
-//		double error = -1;
-//		while (learning) {
-//			if ((System.nanoTime() - startTime) / 1e9 > 30) {
-//				System.out.println("UH-OH " + a + "sin( " + b + "x + " + c + " ) + " + d + " + " + e + "x");//***
-//			}
-//			double sum_a = 0;
-//			double sum_b = 0;
-//			double sum_c = 0;
-//			double sum_d = 0;
-//			double sum_e = 0;//***
-//			double error_sum = 0;
-//			for (int i = f.length - pts; i < f.length; i++) {
-//				// We sum all the previous errors.
-//				int x_i = pts - f.length + i;
-//				double diff = h(x_i) - f[i];
-//				error_sum += diff * diff;
-//				sum_d += diff; 
-//				sum_a += diff * Math.sin(b * x_i);
-//				sum_b += diff * a * x_i * Math.cos(b * x_i + c);
-//				sum_c += diff * a * Math.cos(b * x_i + c);
-//				sum_e += diff * x_i;//***
-//			}
-//			// Don't forget to divide by pts at the end.
-//			sum_a /= (double) pts;
-//			sum_b /= (double) pts;
-//			sum_c /= (double) pts;
-//			sum_d /= (double) pts;
-//			sum_e /= (double) pts;//***
-//			// This is our error function (J(x))
-//			error = error_sum * 1/2 * pts ; 
-//			//addCSVEntry(error, 0d, 0d, 0d, "", f);
-//			/*if (error == 0) {
-//				System.out.println("No Error");
-//				break; // If there is no error, then the values are perfect, and we may exit.
-//			} else*/ if (Math.abs(error - prevError) < DONE_LEARNING && prevError >= 0) {
-//				learning = false;
-//			} else {
-//				prevError = error;
-//			}
-//			
-//			/*
-//		 	*  Note that we can't yet assign these values to a, b, c, and d, as 
-//		 	*  this would screw up the other calculations, so we put them in 
-//		 	*  temporary variables for the time being.
-//		 	*/
-//			double temp_a = a - learningRate * 100 * sum_a;
-//			double temp_b = b - learningRate * .1 * sum_b; // Learning rate on this guy has to be very delicate as highly non-convex
-//			double temp_c = c - learningRate * 100 * sum_c;
-//			double temp_d = d - learningRate * 100 * sum_d;
-//			double temp_e = e - learningRate * 100 * sum_e;//***
-//		
-//			// Now we can set these.
-//			a = temp_a;
-//			b = temp_b;
-//			c = temp_c;
-//		    d = temp_d;
-//			e = temp_e;//***
-//			
-//			
-//		}
-//		double time = (double)(System.nanoTime() - startTime) / 1e9;
-//		System.out.println(a + "sin( " + b + "x + " + c + " ) + " + d + " + " + e + "x   Error: " + error + "   Time: " + time + " seconds");//***
-//		//addCSVEntry(0d, 0d, 0d, 0d, "", f);
-//	}
-	
-	/**
-	 * This method will attempt to detect if a ridge is imminent or, more easily, 
-	 * if one has recently happened.
-	 * @param f - double array of previous data points.
-	 * @return - returns -1 if a ridge is presently occuring, otherwise it will 
-	 * return the number of minutes (max is NUM_DATA) since the last ridge.
-	 */
-	private int getRidgeIfOneExists(double[] f) {
-		
-		// TODO: Implement this method (May need to add params).
-		
-		return NUM_DATA;
 	}
 	
 	private void addCSVEntry(double mp, double v, double usd, double df, String traded, double[] f) {
