@@ -1,5 +1,7 @@
 package traders;
 
+import java.util.Date;
+
 import org.json.JSONArray;
 
 import API.Constants;
@@ -20,11 +22,11 @@ public class RidgeDetector extends Trader {
 	private static final int UPDATE_RATE_SEC = 20;
 	
 	// This is the threshold for how much deviation we allow for in the price
-	private static final double RIDGE_THRESHOLD = 3.0;
+	private static final double RIDGE_THRESHOLD = 2.1;
 	
 	// This will be how far back we look in the data. We don't want it to be too far back, so we will only look 
 	// at the last 10 minutes of data.
-	private static final int NUM_DATA = 10;
+	private static final int NUM_DATA = 20;
 	
 	// For writing to csv
 	private String csvMain = "ridges.csv";
@@ -70,30 +72,34 @@ public class RidgeDetector extends Trader {
 		for (double p : f) {
 			stdDev += Math.pow(mean - p, 2);
 		}
-		stdDev /= (NUM_DATA - 1);
-		stdDev = Math.sqrt(stdDev / (NUM_DATA - 1));
+		stdDev = Math.sqrt(stdDev / (double) (NUM_DATA - 1));
 		
-		if (Math.abs(f[NUM_DATA - 1] - mean) < RIDGE_THRESHOLD * stdDev) {
+		// If the difference is outside of our range.
+		if (Math.abs(f[NUM_DATA - 1] - mean) >= RIDGE_THRESHOLD * stdDev) {
 			// We have a ridge, do something.
 			StringBuilder sb = new StringBuilder();
-			sb.append(mean + "," + f[NUM_DATA - 1]);
+			sb.append(mean + "," + stdDev + "," +f[NUM_DATA - 1] + "," + (new Date(currentTimestamp)) + ",1");
 			ridgeLogger.addLineToFile(sb, csvMain);
+			// Because we are in a ridge, the time since the last ridge is 0
+			lastRidge = 0; 
+			// Here we need to trade as if we are in a ridge.
 			
+			
+		} else {
+			// If we have no ridge, we can add to the time since the last ridge (in minutes)
+			lastRidge += (double) UPDATE_RATE_SEC / 60;
+			StringBuilder sb = new StringBuilder();
+			sb.append(mean + "," + stdDev + "," +f[NUM_DATA - 1] + "," + (new Date(currentTimestamp)) + ",0");
+			ridgeLogger.addLineToFile(sb, csvMain);
 		}
 		
-		/*
-		 * TODO: Not only test this method, but also make it so that lastRidge is updated accordingly, 
-		 * as this is the crucial variable. There should also be some indication as to whether or not 
-		 * the ridge is going up or down, as this is also very important. Trading need not necessarily be 
-		 * implemented in here, but it is a possibility.
-		 */
 	}
 	
 	// This method should return the number of minutes since the last ridge, or 0 if a ridge is currently happening. 
 	public static double getLastRidge() {
 		// TODO: Implement this.
 		
-		return 60; // Default number
+		return lastRidge; // Default number
 	}
 	
 	

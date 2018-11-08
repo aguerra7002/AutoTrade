@@ -5,6 +5,7 @@ import actions.SetupAction;
 import balance.BalanceHub;
 import server.WebServer;
 import traders.MLSinewaveFitRidgeDetectorTrader;
+import traders.RidgeDetector;
 
 
 
@@ -18,9 +19,10 @@ public class TradeRun {
 	public static void main(String[] args) {
 		
 		MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
+		RidgeDetector trader1 = new RidgeDetector(true);
 		
 		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		sa.getMinQty();
+		//sa.getMinQty();
 		
 		MarketFetchAction mfa = new
 				MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
@@ -37,7 +39,7 @@ public class TradeRun {
 		
 		// Starts the trader. Very complex
 		trader.begin();
-
+		trader1.begin();
 	}
 
 }

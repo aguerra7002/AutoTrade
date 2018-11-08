@@ -5,15 +5,26 @@ import java.net.URISyntaxException;
 
 import org.apache.http.client.ClientProtocolException;
 
+import actions.SetupAction;
+import balance.BalanceHub;
+import traders.RidgeDetector;
+
+
+
+/**
+ * 
+ * Simple test class where we can test code from. Same as TradeRun structurally. 
+ */
 public class Test {
 	
+	
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
-		//SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		//sa.getMinQty();
+		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
+		sa.getMinQty();
 		//MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
 		//System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
-		//BalanceHub hub = BalanceHub.getInstance();
-		//hub.setValue(1000d, 0d);
+		BalanceHub hub = BalanceHub.getInstance();
+		hub.setValue(1000d, 0d);
 		//WebServer server = new WebServer();
 		//server.startServer();
 		//MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
@@ -23,16 +34,10 @@ public class Test {
 //		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
 //		double density = tfa.getTradeDensity();
 //		System.out.println(density);
-		
-		StringBuilder sb = new StringBuilder();
-		sb.append("TESTING");
-		logging.Logger log = new logging.Logger();
-		log.addFile("test.csv", true);
-		log.addLineToFile(sb, "test.csv");
-		System.out.println("One down");
-		StringBuilder sb1 = new StringBuilder();
-		sb1.append("SECOND");
-		log.addLineToFile(sb1, "test.csv");
+		RidgeDetector trader = new RidgeDetector(true);
+		trader.begin();
+
+
 		
 		// ****************** BELOW IS OLD STUFF ***************************
 //		Executor executor = Executor.newInstance();
