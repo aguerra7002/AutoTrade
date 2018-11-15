@@ -128,6 +128,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			// This will fully sync the two traders. Note that the ridge detector has "priority" over this trader, 
 			// and rightfully so, as it is a more urgent/profitable thing to have happen.
 			
+			
 		} else if (lastRidge >= MIN_DATA_TO_TRADE){
 			/*
 			 * If we are here, we are "normal" market conditions, or in other words, we can probably fit a nice curve
@@ -204,9 +205,8 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			double toTradeQty = Math.abs(((double)((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
 			// Determine to buy or sell.
 			boolean isBuyOrder = toTradeVal > 0 ? true : false;
-			// Create the OrderAction object.
-			
-			OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, toTradeQty);
+			// Create the OrderAction object. Note that we want limit order to avoid bad trading
+			OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, OrderAction.LIMIT_ORDER, toTradeQty);
 			oa.execute();
 			System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			// Now that the order has executed, update our Vals for use in the next iteration.

@@ -19,17 +19,21 @@ import API.Constants;
 import security.SignatureFactory;
 
 public class OrderAction extends BinanceAction {
+	
+	public static final String MARKET_ORDER = "MARKET";
+	public static final String LIMIT_ORDER = "LIMIT";
 
 	String orderID;
 	String orderSymbol;
 	double orderQty;
 	String side;
-
+	String orderType;
 	// This is updated when execute is called.
 	String result;
 	
-	public OrderAction(String symbol, boolean isBuyOrder, double qty) {
+	public OrderAction(String symbol, boolean isBuyOrder, String type, double qty) {
 		super("v3/api/order/test");
+		orderType = type;
 		side = isBuyOrder ? "BUY" : "SELL";
 		orderQty = qty;
 		orderSymbol = symbol;
@@ -45,7 +49,7 @@ public class OrderAction extends BinanceAction {
 			URI sellUri = new URIBuilder(location)
 					.setParameter("symbol", orderSymbol)
 					.setParameter("side", side)
-					.setParameter("type", "MARKET")
+					.setParameter("type", orderType)
 				//	.setParameter("timeInForce", "GTC")
 					.setParameter("quantity", orderQty + "")
 					.setParameter("newOrderRespType", "RESULT")

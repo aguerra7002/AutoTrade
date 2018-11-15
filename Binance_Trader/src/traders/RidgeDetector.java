@@ -92,8 +92,8 @@ public class RidgeDetector extends Trader {
 				BalanceHub hub = BalanceHub.getInstance();
 				// The amount we buy will deplete all our usd value, we are putting it all into crypto
 				double toTradeQty = hub.getUSDValue() / mfa.getCurrentPrice();
-				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, toTradeQty);
+				// Do the order at market price to get it done asap
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, OrderAction.MARKET_ORDER, toTradeQty);
 				oa.execute();
 				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			} else {
@@ -101,8 +101,8 @@ public class RidgeDetector extends Trader {
 				BalanceHub hub = BalanceHub.getInstance();
 				// We just want to sell the qty of crypto we have, convert all to usd.
 				double toTradeQty = hub.getCryptoQty();
-				//TODO: MAKE THESE MARKET ORDERS SO THEY GO THRU QUICKLY
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, toTradeQty);
+				// Do the order at market price to get it done asap
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, OrderAction.MARKET_ORDER, toTradeQty);
 				oa.execute();
 				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			}
@@ -110,9 +110,6 @@ public class RidgeDetector extends Trader {
 		} else {
 			// If we have no ridge, we can add to the time since the last ridge (in minutes)
 			lastRidge += (double) UPDATE_RATE_SEC / 60;
-			StringBuilder sb = new StringBuilder();
-			sb.append(mean + "," + stdDev + "," +f[NUM_DATA - 1] + "," + (new Date(currentTimestamp)) + ",0");
-			ridgeLogger.addLineToFile(sb, csvMain);
 		}
 		
 	}

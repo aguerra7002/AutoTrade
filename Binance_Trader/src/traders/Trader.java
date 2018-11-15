@@ -15,6 +15,8 @@ public abstract class Trader implements Runnable {
 	
 	// This is June 1, 2018. Probably fine.
 	protected static final long DEFAULT_STARTING_TIMESTAMP_MS = 1527811200000l;
+	// This is June 18, 2018. Allows us to test for 18 days, which is fine for our purposes.
+	protected static final long OPTIONAL_END_TIMESTAMP_MS = 1529280000000l;
 	
 	// This will be the updated currentTimestamp. 
 	protected static long currentTimestamp;
