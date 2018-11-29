@@ -28,5 +28,13 @@
 	<classpathentry kind="lib" path="Dependencies/jna-4.4.0.jar"/>
 	<classpathentry kind="lib" path="Dependencies/jna-platform-4.4.0.jar"/>
 	<classpathentry kind="lib" path="Dependencies/json-20180813.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/dl4j-examples"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/datavec-examples"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/dl4j-cuda-specific-examples"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/dl4j-spark"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/dl4j-spark-cluster"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lstm-hdfs"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/nd4j-examples"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/rl4j-examples"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
