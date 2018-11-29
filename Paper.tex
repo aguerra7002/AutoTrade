@@ -71,6 +71,19 @@ To help me better understand LSTM networks, I have also found the following vide
 \item \href{https://towardsdatascience.com/the-fall-of-rnn-lstm-2d1594c74ce0}{https://towardsdatascience.com/the-fall-of-rnn-lstm-2d1594c74ce0}
 \item \href{https://www.youtube.com/watch?v=WCUNPb-5EYI}{https://www.youtube.com/watch?v=WCUNPb-5EYI}
 \item \href{https://deeplearning4j.org/docs/latest/deeplearning4j-nn-recurrent}{https://deeplearning4j.org/docs/latest/deeplearning4j-nn-recurrent}** This is a good article as it explains how to implement RNN's in Dl4J while also touching on how to implement different architectures for the LSTM cells, something that will certainly be useful in the future when we attain more complex models.
+\item \href{https://www.youtube.com/watch?v=6niqTuYFZLQ}{https://www.youtube.com/watch?v=6niqTuYFZLQ} Good Stanford Lecture on RNN's with some more technical background and covering of LSTM's at a high level.
 \end{enumerate}
+\subsection*{Initial architecture of LSTM Network}
+Initially, we want the simplest possible architecture for our LSTM Network. What we did for this is simply synthesize some test data of oscillating states (discreet) and tried to get the RNN to learn the oscillating state. With a training input of $\{0,1,2,1,2,\ldots,1,2\}$, we when attempting to replicate this data over 100 epochs, we get pretty good results:
+\begin{align*}
+\text{Result \#1: \texttt{12121212121212121212}} && \text{Result \#2: \texttt{12121212121212121000}}.
+\end{align*}
+This is a good start initially as a first iteration of a RNN, but there is still a lot to be done. When increasing the complexity of the data, where inputs can go to multiple things depending on multiple things in the past, the simple model struggles. For example, when we try to replicate the again oscillating input $\{0,1,2,3,4,5,4,3,2,1,\ldots,5,4,3\}$, we get the following results
+$$
+\text{Result \#3: \texttt{24433223444222330000}}
+$$
+There is some oscillation here, but it certainly is not close to replicating the 1-5 pattern of our input data. So, one thing to fix would be to make this network be more of LSTM-based rather than RNN based. However, this is not the only thing that needs to be fixed with our model. For example, we do not want to replicate data, but instead predict based on the current state, so we must rewrite our program a tad to do this. Another thing that is unacceptable with this model is that the input and output vectors are discrete, whereas we want continuous if possible. We will also have to modify our program to handle this as well. Lastly, this is a very simplistic cell. In the example code of the DL4J repo there one class where they construct an encoder-decoder LSTM, something that would be very good not necessarily now as not a lot of data is being used, but definitely may be helpful down the road when more and higher complexity data is introduced to the model. \\\newline 
+For the second iteration, I decided fix the problem of replicating vs. predicting mentioned above to have the model further resemble that of a time-series predictor model. This was relatively easy to do, the only difficulty came into taking care with the dimensionality of the various spaces.
+
 
 \end{document}
