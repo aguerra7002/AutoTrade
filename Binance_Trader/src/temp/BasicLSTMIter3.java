@@ -32,9 +32,6 @@ public class BasicLSTMIter3 {
 	
 	private static final int[] LEARNARR = LEARNARR_HARD;
 
-	// a list of all possible characters
-	private static final List<Integer> LEARNSTRING_INTS_LIST = new ArrayList<>();
-
 	// RNN dimensions
 	private static final int HIDDEN_LAYER_WIDTH = 50;
 	private static final int HIDDEN_LAYER_CONT = 3;
