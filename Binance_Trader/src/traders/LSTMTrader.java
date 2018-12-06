@@ -17,6 +17,7 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.json.JSONArray;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.RmsProp;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
@@ -50,11 +51,21 @@ public class LSTMTrader extends Trader {
     private static final int INPUT_LAYER_SIZE = DATA_FETCH_SIZE - INPUT_SIZE - NUM_OUTPUT_PREDICTIONS + 1;
 	
 	private MultiLayerNetwork net;
+	/*
+	 *  This is very important, as it will allow us to provide `feedback' to our LSTM. This is really cool 
+	 *  because in a sense it brings together reinforcement learning and LSTM's. This in hope will make our 
+	 *  network highly adaptable and powerful.
+	 */
+	private double[] fPrev = new double[INPUT_SIZE];
+	private boolean firstRun = true;
 	
 	public LSTMTrader(boolean isTestMode) {
 		super(UPDATE_RATE_SEC, isTestMode);
 		// TODO Auto-generated constructor stub
 		initTrainNetwork();
+		
+		// Here, we probably want to change our NN's hyper-parameters if possible, like lr and such.
+		//net.conf.set<hyperparameter>(value);
 	}
 	
 	/*
@@ -95,8 +106,7 @@ public class LSTMTrader extends Trader {
 		double usdVal = hub.getUSDValue();
 		// And get the crypto Val.
 		double cryptoVal = hub.getCryptoValue();
-		// Now, we want to find our target valuation so we can calculate the difference
-		// and trade.
+		// Now, we want to find our target valuation so we can calculate the difference and trade.
 		double targetCryptoVal = (usdVal + cryptoVal) * balanceRisk;
 		// Also want to get target USD Val as it will be useful for fee calculations
 		double targetUSDVal = (usdVal + cryptoVal) - targetCryptoVal;
@@ -110,8 +120,7 @@ public class LSTMTrader extends Trader {
 			return;
 		}
 
-		// This is an expression that calculates what our predicted profit is without
-		// accounting for trading fees.
+		// This is an expression that calculates what our predicted profit is without accounting for trading fees.
 		double predictedGrossProfit = (targetUSDVal - usdVal) + (f_pred - f[f.length - 1]) * (targetCryptoVal - cryptoVal);
 		double fees = toTradeVal * TRADE_FEE_RATE;
 		// See if the fees put us in the red, if they do, then don't trade
@@ -121,26 +130,40 @@ public class LSTMTrader extends Trader {
 		}
 		// If we made it here, then we are going through with the trade...
 
-		// Now we want to carry out the trade. First, get the amount necessary needed to
-		// buy/sell.
+		// Now we want to carry out the trade. First, get the amount necessary needed to buy/sell.
 		double toTradeQty = Math.abs(((double) ((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
 		// Determine to buy or sell.
 		boolean isBuyOrder = toTradeVal > 0 ? true : false;
-		// Create the OrderAction object. Note that we want limit order to avoid bad
-		// trading
+		// Create the OrderAction object. Note that we want limit order to avoid bad trading
 		OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, OrderAction.LIMIT_ORDER,
 				toTradeQty);
 		oa.execute();
 		System.out.println(
 				"Order executed, traded " + toTradeQty + " at " + new Date()/* + " Result: " + oa.getResult() */);
-		// Now that the order has executed, update our Vals for use in the next
-		// iteration.
+		// Now that the order has executed, update our Vals for use in the next iteration.
 		hub.setValue(usdVal - toTradeVal, targetCryptoVal);
 		System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
 		
 		// Finally, the unique step. Use the current price paired with the previous price to get the error so we can fit and backpropagate
-		// TODO: Implement
-		
+		if (firstRun) {
+			firstRun = false;
+			INDArray input = Nd4j.zeros(INPUT_LAYER_SIZE, INPUT_SIZE, 1);
+			INDArray labels = Nd4j.zeros(INPUT_LAYER_SIZE, NUM_OUTPUT_PREDICTIONS, 1);
+			for (int i = 0; i < INPUT_SIZE; i++) {
+				// Put the last runs data as the input
+				input.putScalar(new int[] {0, i, 0}, fPrev[i]);
+			}
+			// Put the current label as the ground truth label
+			labels.putScalar(new int[] {0, 0, 0}, f[f.length - 1]);
+			// Then create the dataset
+			DataSet trainingData = new DataSet(input, labels);
+			// And then train. //TODO: Parallelize? 
+			net.fit(trainingData);
+			// Lastly, we don't need to do any more prediction this iteration, so we can clear its current state. (I think)
+			net.rnnClearPreviousState();
+		}
+		// The just predicted price becomes the old predicted price.
+		fPrev = f;
 	}
 	
 	// Determines risk of trading based on predicted change in price.
@@ -182,7 +205,7 @@ public class LSTMTrader extends Trader {
 			builder.seed(123);
 			builder.biasInit(0);
 			builder.miniBatch(false);
-			builder.updater(new RmsProp(0.01));
+			builder.updater(new RmsProp(0.01)); // This should be the inital lr, but it should be less for training.
 			builder.weightInit(WeightInit.XAVIER);
 
 			ListBuilder listBuilder = builder.list();
