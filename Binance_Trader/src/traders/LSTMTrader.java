@@ -2,6 +2,7 @@ package traders;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.Random;
 
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -13,11 +14,27 @@ import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.util.ModelSerializer;
+import org.json.JSONArray;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.RmsProp;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 
+import API.Constants;
+import actions.MarketFetchAction;
+import actions.OrderAction;
+import balance.BalanceHub;
+
 public class LSTMTrader extends Trader {
+	
+	// Trade at least a dollars worth of stuff, otherwise not worth it.
+	private static final double MIN_TRADE_VALUE_THRESHOLD = 1;
+	// TODO: Empirically determine this constant. Will affect how much we trade
+	private static final double STD_MARKET_DEVIATION = 0.00001;
+	
+	// Trade fee percentage
+	private static final double TRADE_FEE_RATE = 0.00075;
 	
 	private static final int UPDATE_RATE_SEC = 60;
 	
@@ -28,8 +45,8 @@ public class LSTMTrader extends Trader {
     
     private static final int DATA_FETCH_SIZE = 60; // Look 60 min into the past.
     // How many inputs we will look at once
-    private static final int INPUT_SIZE = 3;
-    private static final int NUM_OUTPUT_PREDICTIONS = 1; // Predict for the next 3 timesteps.
+    private static final int INPUT_SIZE = 59; // TODO: CHANGE THIS and the fetch size as you want.
+    private static final int NUM_OUTPUT_PREDICTIONS = 1; // Predict for the next n timesteps.
     private static final int INPUT_LAYER_SIZE = DATA_FETCH_SIZE - INPUT_SIZE - NUM_OUTPUT_PREDICTIONS + 1;
 	
 	private MultiLayerNetwork net;
@@ -40,6 +57,104 @@ public class LSTMTrader extends Trader {
 		initTrainNetwork();
 	}
 	
+	/*
+	 * This method will not only do the trading as with the other traders, but will also update the network with a 
+	 * new piece of data, hopefully strengthening the model over time. This should also make the network able to 
+	 * change over time as the market changes.
+	 */
+	@Override
+	protected void update() {
+		
+		// First step: Get the past data (Same as other trader)
+		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, DATA_FETCH_SIZE);
+		// TODO: Adjust MFA so we can get a certain amount of data as opposed to just being at its mercy.
+		JSONArray result = mfa.getResult();
+		JSONArray sub;
+		double[] f = new double[INPUT_SIZE];
+		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE, 1);
+		for (int i = 0; i < result.length(); i++) {
+			sub = result.getJSONArray(i);
+			double d = Double.parseDouble(sub.getString(4));
+			f[i] = d;
+			toPred.putScalar(new int[]{0, i, 0}, d);
+		}
+		
+		// Then feed this to the existing model, get a predicted price output.
+		INDArray output = net.rnnTimeStep(toPred);
+		String s = output.toString();
+		double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
+		//System.out.println("Predicted price: " + f_pred);
+		
+		// Trade based on the predicted price (Same as other trader)
+		// Then find the difference between the new estimate and the last known val
+		double difference = f_pred - f[f.length - 1];
+		// Now, get the optimal balance given the difference.
+		BalanceHub hub = BalanceHub.getInstance();
+		double balanceRisk = calcRiskForCrypto(difference);
+		// Get the usd value of our balance.
+		double usdVal = hub.getUSDValue();
+		// And get the crypto Val.
+		double cryptoVal = hub.getCryptoValue();
+		// Now, we want to find our target valuation so we can calculate the difference
+		// and trade.
+		double targetCryptoVal = (usdVal + cryptoVal) * balanceRisk;
+		// Also want to get target USD Val as it will be useful for fee calculations
+		double targetUSDVal = (usdVal + cryptoVal) - targetCryptoVal;
+		// Find the difference between our target
+		double toTradeVal = targetCryptoVal - cryptoVal;
+		// If it tells us to trade an insignificant amount, then just stop.
+
+		if (Math.abs(toTradeVal) < MIN_TRADE_VALUE_THRESHOLD) {
+			System.out.println(toTradeVal);
+			/* TODO: Add logging to this */
+			return;
+		}
+
+		// This is an expression that calculates what our predicted profit is without
+		// accounting for trading fees.
+		double predictedGrossProfit = (targetUSDVal - usdVal) + (f_pred - f[f.length - 1]) * (targetCryptoVal - cryptoVal);
+		double fees = toTradeVal * TRADE_FEE_RATE;
+		// See if the fees put us in the red, if they do, then don't trade
+		if (predictedGrossProfit - fees <= 0) {
+			/* TODO: Add logging to this */
+			return;
+		}
+		// If we made it here, then we are going through with the trade...
+
+		// Now we want to carry out the trade. First, get the amount necessary needed to
+		// buy/sell.
+		double toTradeQty = Math.abs(((double) ((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
+		// Determine to buy or sell.
+		boolean isBuyOrder = toTradeVal > 0 ? true : false;
+		// Create the OrderAction object. Note that we want limit order to avoid bad
+		// trading
+		OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, OrderAction.LIMIT_ORDER,
+				toTradeQty);
+		oa.execute();
+		System.out.println(
+				"Order executed, traded " + toTradeQty + " at " + new Date()/* + " Result: " + oa.getResult() */);
+		// Now that the order has executed, update our Vals for use in the next
+		// iteration.
+		hub.setValue(usdVal - toTradeVal, targetCryptoVal);
+		System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
+		
+		// Finally, the unique step. Use the current price paired with the previous price to get the error so we can fit and backpropagate
+		// TODO: Implement
+		
+	}
+	
+	// Determines risk of trading based on predicted change in price.
+	private double calcRiskForCrypto(double difference) {
+		double z = difference / STD_MARKET_DEVIATION;
+		if (z < -8.0) return 0.0;
+        if (z >  8.0) return 1.0;
+        double sum = 0.0, term = z;
+        for (int i = 3; sum + term != sum; i += 2) {
+            sum  = sum + term;
+            term = term * z * z / i;
+        }
+		return 0.5 + sum * Math.exp(-z*z / 2) / Math.sqrt(2 * Math.PI);
+	}
 	
 	/*
 	 * This method is intended to train up a net if we have none already trained. This method thus should 
@@ -108,23 +223,13 @@ public class LSTMTrader extends Trader {
 			 */
 		}
 	}
-
-	/*
-	 * This method will not only do the trading as with the other traders, but will also update the network with a 
-	 * new piece of data, hopefully strengthening the model over time. This should also make the network able to 
-	 * change over time as the market changes.
-	 */
-	@Override
-	protected void update() {
-		// TODO: Implement
-	}
 	
 	
 	/* 
 	 * This method should be as simple as saving the model to a file, nothing more. We do this by utilizing Dl4J's 
-	 * Model Serialization capability.
+	 * Model Serialization capability. 
 	 */
-	private void saveNet() {
+	public void saveNet() {
 		try {
 			ModelSerializer.writeModel(net, "model", true);
 		} catch (IOException e) {

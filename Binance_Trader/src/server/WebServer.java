@@ -24,17 +24,7 @@ public class WebServer {
 	HttpServer server;
 	public WebServer() {
 		dataToDisplay = "No Data Set";
-		/* 
-		 * One important reponsibility of this class is to shut down the server
-		 * when we are exiting, which we do with the following lines.
-		 */
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				stopServer();
-				// TODO: Clean up the other stuff here.
-			}
-		});
+		
 		
 		// This assigns another thread to update the value on the web. 
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
