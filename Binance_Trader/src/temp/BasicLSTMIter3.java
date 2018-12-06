@@ -108,7 +108,7 @@ public class BasicLSTMIter3 {
 
 			System.out.println("Epoch " + epoch);
 			IteratorDataSetIterator iter = new IteratorDataSetIterator(trainingData.iterator(), INPUT_LAYER_SIZE);
-			for (int i = 0; i < 1; i++) {
+			for (int i = 0; i < 1; i++) { // TODO: Make this better at batching properly.
 				// train the data
 				net.fit(iter.next());
 				//net.computeGradientAndScore();

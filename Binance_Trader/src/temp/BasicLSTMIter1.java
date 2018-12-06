@@ -105,10 +105,10 @@ public class BasicLSTMIter1 {
 		INDArray labels = Nd4j.zeros(1, LEARNSTRING_CHARS_LIST.size(), LEARNSTRING.length);
 		// loop through our sample-sentence
 		int samplePos = 0;
-		for (char currentChar : LEARNSTRING) {
+		for (int currentChar : LEARNSTRING) {
 			// small hack: when currentChar is the last, take the first char as
 			// nextChar - not really required. Added to this hack by adding a starter first character.
-			char nextChar = LEARNSTRING[(samplePos + 1) % (LEARNSTRING.length)];
+			int nextChar = LEARNSTRING[(samplePos + 1) % (LEARNSTRING.length)];
 			// input neuron for current-char is 1 at "samplePos"
 			input.putScalar(new int[] { 0, LEARNSTRING_CHARS_LIST.indexOf(currentChar), samplePos }, 1);
 			// output neuron for next-char is 1 at "samplePos"
@@ -138,7 +138,7 @@ public class BasicLSTMIter1 {
 			INDArray output = net.rnnTimeStep(testInit);
 
 			// now the net should guess LEARNSTRING.length more characters
-            for (char dummy : LEARNSTRING) {
+            for (int dummy : LEARNSTRING) {
 
                 // first process the last output of the network to a concrete
                 // neuron, the neuron with the highest output has the highest

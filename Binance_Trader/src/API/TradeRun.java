@@ -8,7 +8,6 @@ import traders.MLSinewaveFitRidgeDetectorTrader;
 import traders.RidgeDetector;
 
 
-
 /**
  * Main Class where we run the Trader from. Note that we can test in the Test class.
  * @author alexg
