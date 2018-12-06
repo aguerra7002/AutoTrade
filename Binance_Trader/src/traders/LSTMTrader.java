@@ -83,18 +83,20 @@ public class LSTMTrader extends Trader {
 		JSONArray sub;
 		double[] f = new double[INPUT_SIZE];
 		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE, 1);
-		for (int i = 0; i < result.length(); i++) {
-			sub = result.getJSONArray(i);
+		for (int i = 0; i < INPUT_SIZE; i++) {
+			// This ensures we get the most recent data points.
+			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
 			double d = Double.parseDouble(sub.getString(4));
 			f[i] = d;
 			toPred.putScalar(new int[]{0, i, 0}, d);
 		}
 		
 		// Then feed this to the existing model, get a predicted price output.
+		// Note that the model is already trained, so this should save a lot of time compared with other methods.
 		INDArray output = net.rnnTimeStep(toPred);
 		String s = output.toString();
 		double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
-		//System.out.println("Predicted price: " + f_pred);
+		System.out.println("Current Price: " + f[f.length - 1] +"    Predicted price: " + f_pred);
 		
 		// Trade based on the predicted price (Same as other trader)
 		// Then find the difference between the new estimate and the last known val
@@ -115,7 +117,7 @@ public class LSTMTrader extends Trader {
 		// If it tells us to trade an insignificant amount, then just stop.
 
 		if (Math.abs(toTradeVal) < MIN_TRADE_VALUE_THRESHOLD) {
-			System.out.println(toTradeVal);
+			//System.out.println(toTradeVal);
 			/* TODO: Add logging to this */
 			return;
 		}
@@ -159,6 +161,7 @@ public class LSTMTrader extends Trader {
 			DataSet trainingData = new DataSet(input, labels);
 			// And then train. //TODO: Parallelize? 
 			net.fit(trainingData);
+			System.out.println("Trained...");
 			// Lastly, we don't need to do any more prediction this iteration, so we can clear its current state. (I think)
 			net.rnnClearPreviousState();
 		}
@@ -205,7 +208,7 @@ public class LSTMTrader extends Trader {
 			builder.seed(123);
 			builder.biasInit(0);
 			builder.miniBatch(false);
-			builder.updater(new RmsProp(0.01)); // This should be the inital lr, but it should be less for training.
+			builder.updater(new RmsProp(0.1)); // This should be the inital lr, but it should be less for updating.
 			builder.weightInit(WeightInit.XAVIER);
 
 			ListBuilder listBuilder = builder.list();
