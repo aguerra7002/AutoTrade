@@ -114,10 +114,6 @@ public class BasicLSTMIter3 {
 				// clear current stance from the last example
 				net.rnnClearPreviousState();
 			}
-
-			// put the last character into the rnn as an initialisation
-			// This will predict the next output in the array, which is what we 
-			// want for time series data
 			
 			INDArray testInit = Nd4j.zeros(1,INPUT_SIZE, 1);
 			System.out.print("In: ");

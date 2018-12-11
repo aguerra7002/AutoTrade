@@ -83,20 +83,24 @@ public class LSTMTrader extends Trader {
 		JSONArray sub;
 		double[] f = new double[INPUT_SIZE];
 		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE, 1);
+		int test = (int) (Math.random() * 4);
 		for (int i = 0; i < INPUT_SIZE; i++) {
 			// This ensures we get the most recent data points.
 			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
-			double d = Double.parseDouble(sub.getString(4));
+			// Uncomment this when ready to test on real data
+			//double d = Double.parseDouble(sub.getString(4));
+			// Comment this out when switching to real data
+			double d = Math.sin(Math.PI * (i + test) / 2); // Simple oscillating from 0 -> 1 -> 0 -> -1
 			f[i] = d;
 			toPred.putScalar(new int[]{0, i, 0}, d);
 		}
 		
 		// Then feed this to the existing model, get a predicted price output.
 		// Note that the model is already trained, so this should save a lot of time compared with other methods.
-		INDArray output = net.rnnTimeStep(toPred);
+		INDArray output = net.output(toPred);
 		String s = output.toString();
 		double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
-		System.out.println("Current Price: " + f[f.length - 1] +"    Predicted price: " + f_pred);
+		System.out.println("Current Price: " + Math.round(f[f.length - 1]) +"    Predicted price: " + Math.round(f_pred));
 		
 		// Trade based on the predicted price (Same as other trader)
 		// Then find the difference between the new estimate and the last known val
@@ -117,8 +121,9 @@ public class LSTMTrader extends Trader {
 		// If it tells us to trade an insignificant amount, then just stop.
 
 		if (Math.abs(toTradeVal) < MIN_TRADE_VALUE_THRESHOLD) {
-			//System.out.println(toTradeVal);
 			/* TODO: Add logging to this */
+			// We don't want to do an order but we still want to train our network, so do this b4 returning
+			//finishTrain(f);
 			return;
 		}
 
@@ -128,6 +133,8 @@ public class LSTMTrader extends Trader {
 		// See if the fees put us in the red, if they do, then don't trade
 		if (predictedGrossProfit - fees <= 0) {
 			/* TODO: Add logging to this */
+			// We don't want to do an order but we still want to train our network, so do this b4 returning
+			//finishTrain(f);
 			return;
 		}
 		// If we made it here, then we are going through with the trade...
@@ -145,28 +152,43 @@ public class LSTMTrader extends Trader {
 		// Now that the order has executed, update our Vals for use in the next iteration.
 		hub.setValue(usdVal - toTradeVal, targetCryptoVal);
 		System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
+		//finishTrain(f);
 		
-		// Finally, the unique step. Use the current price paired with the previous price to get the error so we can fit and backpropagate
-		if (firstRun) {
-			firstRun = false;
+	}
+	
+	private void finishTrain(double[] f) {
+		// Finally, the unique step. Use the current price paired with the previous
+		// price to get the error so we can fit and backpropagate
+		if (!firstRun) {
+
 			INDArray input = Nd4j.zeros(INPUT_LAYER_SIZE, INPUT_SIZE, 1);
 			INDArray labels = Nd4j.zeros(INPUT_LAYER_SIZE, NUM_OUTPUT_PREDICTIONS, 1);
 			for (int i = 0; i < INPUT_SIZE; i++) {
 				// Put the last runs data as the input
-				input.putScalar(new int[] {0, i, 0}, fPrev[i]);
+				input.putScalar(new int[] { 0, i, 0 }, fPrev[i]);
 			}
 			// Put the current label as the ground truth label
-			labels.putScalar(new int[] {0, 0, 0}, f[f.length - 1]);
+			labels.putScalar(new int[] { 0, 0, 0 }, f[f.length - 1]);
 			// Then create the dataset
 			DataSet trainingData = new DataSet(input, labels);
-			// And then train. //TODO: Parallelize? 
+			// And then train. //TODO: Parallelize?
 			net.fit(trainingData);
-			System.out.println("Trained...");
-			// Lastly, we don't need to do any more prediction this iteration, so we can clear its current state. (I think)
-			net.rnnClearPreviousState();
+			
+			// Lastly, we don't need to do any more prediction this iteration, so we can
+			// clear its current state. (I think)
+
+		} else {
+			// Don't do anything on the first run.
+			firstRun = false;
 		}
 		// The just predicted price becomes the old predicted price.
 		fPrev = f;
+		// TODO: Currently we need to reset the state which kinda sucks and slows the
+		// program down (albeit marginally)
+		// Would be nice to update code to fully utilize the efficiency of the
+		// rnnTimestep() method.
+		//net.rnnClearPreviousState();
+		System.out.println("Trained...");
 	}
 	
 	// Determines risk of trading based on predicted change in price.
@@ -188,13 +210,13 @@ public class LSTMTrader extends Trader {
 	 * time, it should just read a model from a file saved by the save method.
 	 */
 	private void initTrainNetwork() {
-		
-		boolean modelExists = new File("model").exists();
+		// See if an existing model exists
+		boolean modelExists = new File("model.zip").exists();
 		if (modelExists) {
 			
 			System.out.println("Existing model found, Restoring...");
 			try {
-				net = ModelSerializer.restoreMultiLayerNetwork("model", true);
+				net = ModelSerializer.restoreMultiLayerNetwork("model.zip", true);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -208,7 +230,7 @@ public class LSTMTrader extends Trader {
 			builder.seed(123);
 			builder.biasInit(0);
 			builder.miniBatch(false);
-			builder.updater(new RmsProp(0.1)); // This should be the inital lr, but it should be less for updating.
+			builder.updater(new RmsProp(0.001)); // This should be the inital lr, but it should be less for updating.
 			builder.weightInit(WeightInit.XAVIER);
 
 			ListBuilder listBuilder = builder.list();
@@ -228,8 +250,7 @@ public class LSTMTrader extends Trader {
 			// TODO: Explore different Loss functions and analyze which would be most useful
 			// for this
 			RnnOutputLayer.Builder outputLayerBuilder = new RnnOutputLayer.Builder(LossFunction.MSE);
-			// softmax normalizes the output neurons, the sum of all outputs is 1
-			// this is required for our sampleFromDistribution-function
+			
 			outputLayerBuilder.activation(Activation.IDENTITY);
 			outputLayerBuilder.nIn(HIDDEN_LAYER_WIDTH);
 			// To make predictions, we only would want a hidden layer size of 1.
@@ -243,10 +264,51 @@ public class LSTMTrader extends Trader {
 			net.init();
 			net.setListeners(new ScoreIterationListener(1));
 			
-			/* TODO: Add code here to actually train the network with something... 
-			 * I'm not sure if this will end up being necessary, but it would be 
-			 * nice to have.
+			/* 
+			 * Here we get a bunch of data to initially train our network. 
 			 */
+			MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, INPUT_SIZE + NUM_OUTPUT_PREDICTIONS);
+			long oneMonthMillis = (long) 2.6e9; // 
+			long endRange = System.currentTimeMillis();
+			long beginRange = endRange - oneMonthMillis;
+			int epochs = 400;
+			int trainDataPoints = 50; // Train initially on this many data points
+			System.out.println("Training started...");
+			
+			for (int k = 0; k < epochs; k++) {
+				INDArray input = Nd4j.zeros(trainDataPoints, INPUT_SIZE, 1);
+				INDArray labels = Nd4j.zeros(trainDataPoints, NUM_OUTPUT_PREDICTIONS, 1);
+				for (int i = 0; i < trainDataPoints; i++) {
+					mfa.setSampleTimestamp((long) (Math.random() * oneMonthMillis) + beginRange);
+					JSONArray result = mfa.getResult();
+					JSONArray sub;
+
+					for (int j = 0; j < INPUT_SIZE; j++) {
+						sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
+						// Uncomment this when ready to test on real data
+						double d = Double.parseDouble(sub.getString(4));
+						// Put the last runs data as the input
+						input.putScalar(new int[] { i, j, 0 }, d);
+					}
+					// Put the current label as the ground truth label
+					sub = result.getJSONArray(result.length() - NUM_OUTPUT_PREDICTIONS);
+					// Uncomment this when ready to test on real data
+					double d = Double.parseDouble(sub.getString(4));
+					labels.putScalar(new int[] { i, 0, 0 }, d);
+
+				}
+				// Then create the dataset
+				DataSet trainingData = new DataSet(input, labels);
+				// And then train.
+				net.fit(trainingData);
+				// I don't know if this has any meaning but we'll see I guess.
+				double score = net.gradientAndScore().getRight();
+				System.out.println("Epoch " + k + " of initial training complete. Score: " + score);
+			}
+			System.out.println("Initial training ended.");
+			
+			// We will save once before we return.
+			saveNet();
 		}
 	}
 	
@@ -257,7 +319,7 @@ public class LSTMTrader extends Trader {
 	 */
 	public void saveNet() {
 		try {
-			ModelSerializer.writeModel(net, "model", true);
+			ModelSerializer.writeModel(net, "model.zip", true);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

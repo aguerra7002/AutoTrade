@@ -67,11 +67,12 @@ public class WebServer {
 	/**
 	 * Very important method to call to ensure we actually get rid of the server.
 	 */
+	@SuppressWarnings("restriction")
 	public void stopServer() {
-		System.out.println("Shutting down server...");
 		server.stop(0); // Exit gracefully
 	}
 
+	@SuppressWarnings("restriction")
 	class MyHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange t) throws IOException {

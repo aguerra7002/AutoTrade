@@ -30,7 +30,10 @@ public class MarketFetchAction extends BinanceAction {
 	// Market symbol
 	String currentSymbol;
 	// Number of data points we want.
-	int limit;
+	private int limit;
+	
+	// For getting data at different timestamps
+	private long sampleTimestamp = -1;
 	
 	// This is what is updated when execute is called.
 	JSONArray result;
@@ -51,6 +54,9 @@ public class MarketFetchAction extends BinanceAction {
 					.setParameter("limit", limit + "")
 					.setParameter("interval", "1m");
 			
+			if (sampleTimestamp != -1) {
+				base.setParameter("startTime", sampleTimestamp + "");
+			}
 			// If in test mode we need to get the data from a certain timestamp.
 			if (testMode) {
 				base.setParameter("startTime", currentTimestamp + "");
@@ -95,6 +101,10 @@ public class MarketFetchAction extends BinanceAction {
 	
 	public int getLimit() {
 		return limit;
+	}
+	
+	public void setSampleTimestamp(long t) {
+		sampleTimestamp = t;
 	}
 
 	public double getCurrentPrice() {

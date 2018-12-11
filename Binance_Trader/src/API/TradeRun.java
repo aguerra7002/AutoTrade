@@ -37,11 +37,11 @@ public class TradeRun {
 		hub.setValue(1000d, 0d);
 		
 		// Starts the web server so we can see our results online.
-		WebServer server = new WebServer();
-		server.startServer();
+		//WebServer server = new WebServer();
+		//server.startServer();
 		
 		// Get the program okay to shutdown gracefully
-		setupProgramClose(server, lstm);
+		setupProgramClose(null, lstm);
 		
 		// Starts the trader. Very complex
 		//trader.begin();
@@ -55,14 +55,15 @@ public class TradeRun {
 		 * Depending how the trader is set up, some params may be null, so we need to 
 		 * check for this.
 		 */
+		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				if (ws != null)	
-					ws.stopServer(); // Shutdown the server properly
+				//System.out.println("Shutting Down...");
 				if (lstm != null) 
 					lstm.saveNet(); // Save the current model for later use.
-				
+				if (ws != null)	
+					ws.stopServer(); // Shutdown the server properly
 				// TODO: Clean up the other stuff here.
 			}
 		});
