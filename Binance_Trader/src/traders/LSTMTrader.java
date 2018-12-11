@@ -3,6 +3,8 @@ package traders;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -18,9 +20,12 @@ import org.json.JSONArray;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerMinMaxScaler;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.learning.config.RmsProp;
+import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
+import org.nd4j.linalg.schedule.MapSchedule;
+import org.nd4j.linalg.schedule.ScheduleType;
 
 import API.Constants;
 import actions.MarketFetchAction;
@@ -40,8 +45,8 @@ public class LSTMTrader extends Trader {
 	private static final int UPDATE_RATE_SEC = 60;
 	
 	// RNN dimensions
-	private static final int HIDDEN_LAYER_WIDTH = 50;
-	private static final int HIDDEN_LAYER_CONT = 3;
+	private static final int HIDDEN_LAYER_WIDTH = 128;
+	private static final int HIDDEN_LAYER_CONT = 4;
     private static final Random r = new Random(7894);
     
     private static final int DATA_FETCH_SIZE = 60; // Look 60 min into the past.
@@ -51,8 +56,10 @@ public class LSTMTrader extends Trader {
     private static final int INPUT_LAYER_SIZE = DATA_FETCH_SIZE - INPUT_SIZE - NUM_OUTPUT_PREDICTIONS + 1;
 	
 	private MultiLayerNetwork net;
+	private NormalizerMinMaxScaler pre;
+	
 	/*
-	 *  This is very important, as it will allow us to provide `feedback' to our LSTM. This is really cool 
+	 *  fPrev is very important, as it will allow us to provide `feedback' to our LSTM. This is really cool 
 	 *  because in a sense it brings together reinforcement learning and LSTM's. This in hope will make our 
 	 *  network highly adaptable and powerful.
 	 */
@@ -90,17 +97,20 @@ public class LSTMTrader extends Trader {
 			// Uncomment this when ready to test on real data
 			//double d = Double.parseDouble(sub.getString(4));
 			// Comment this out when switching to real data
-			double d = Math.sin(Math.PI * (i + test) / 2); // Simple oscillating from 0 -> 1 -> 0 -> -1
+			double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
 			f[i] = d;
 			toPred.putScalar(new int[]{0, i, 0}, d);
 		}
+		// Transform it before making our prediction
+		pre.transform(toPred);
 		
 		// Then feed this to the existing model, get a predicted price output.
 		// Note that the model is already trained, so this should save a lot of time compared with other methods.
 		INDArray output = net.output(toPred);
+		pre.revertLabels(output);
 		String s = output.toString();
 		double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
-		System.out.println("Current Price: " + Math.round(f[f.length - 1]) +"    Predicted price: " + Math.round(f_pred));
+		System.out.println("Current Price: " + Math.round(f[f.length - 1]) +"    Predicted price: " + f_pred);
 		
 		// Trade based on the predicted price (Same as other trader)
 		// Then find the difference between the new estimate and the last known val
@@ -187,7 +197,7 @@ public class LSTMTrader extends Trader {
 		// program down (albeit marginally)
 		// Would be nice to update code to fully utilize the efficiency of the
 		// rnnTimestep() method.
-		//net.rnnClearPreviousState();
+		net.rnnClearPreviousState();
 		System.out.println("Trained...");
 	}
 	
@@ -230,7 +240,15 @@ public class LSTMTrader extends Trader {
 			builder.seed(123);
 			builder.biasInit(0);
 			builder.miniBatch(false);
-			builder.updater(new RmsProp(0.001)); // This should be the inital lr, but it should be less for updating.
+			Map<Integer, Double> lrSchedule = new HashMap<>();
+			int epochs = 500;
+			lrSchedule.put(0, 0.0001d); // iteration #, learning rate
+		    //lrSchedule.put(40, 0.1);
+//		    lrSchedule.put(6, 2d);
+//		    lrSchedule.put(10, .1);
+//		    lrSchedule.put(15, .01);
+//		    lrSchedule.put(epochs, 0.001);
+			builder.updater(new Adam(new MapSchedule(ScheduleType.ITERATION, lrSchedule)));
 			builder.weightInit(WeightInit.XAVIER);
 
 			ListBuilder listBuilder = builder.list();
@@ -271,7 +289,6 @@ public class LSTMTrader extends Trader {
 			long oneMonthMillis = (long) 2.6e9; // 
 			long endRange = System.currentTimeMillis();
 			long beginRange = endRange - oneMonthMillis;
-			int epochs = 400;
 			int trainDataPoints = 50; // Train initially on this many data points
 			System.out.println("Training started...");
 			
@@ -279,27 +296,39 @@ public class LSTMTrader extends Trader {
 				INDArray input = Nd4j.zeros(trainDataPoints, INPUT_SIZE, 1);
 				INDArray labels = Nd4j.zeros(trainDataPoints, NUM_OUTPUT_PREDICTIONS, 1);
 				for (int i = 0; i < trainDataPoints; i++) {
-					mfa.setSampleTimestamp((long) (Math.random() * oneMonthMillis) + beginRange);
-					JSONArray result = mfa.getResult();
+					long randTime = (long) (r.nextDouble() * oneMonthMillis) + beginRange;
+					//System.out.println(randTime);
+					mfa.setSampleTimestamp(randTime);
+					//JSONArray result = mfa.getResult();
 					JSONArray sub;
-
+					int off = (int) (Math.random() * 4);
 					for (int j = 0; j < INPUT_SIZE; j++) {
-						sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
+						//sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
 						// Uncomment this when ready to test on real data
-						double d = Double.parseDouble(sub.getString(4));
+						//double d = Double.parseDouble(sub.getString(4));
+						double d = Math.sin(Math.PI * (j + off) / 2) + 50;
 						// Put the last runs data as the input
 						input.putScalar(new int[] { i, j, 0 }, d);
 					}
 					// Put the current label as the ground truth label
-					sub = result.getJSONArray(result.length() - NUM_OUTPUT_PREDICTIONS);
+					//sub = result.getJSONArray(result.length() - NUM_OUTPUT_PREDICTIONS);
 					// Uncomment this when ready to test on real data
-					double d = Double.parseDouble(sub.getString(4));
+					//double d = Double.parseDouble(sub.getString(4));
+					double d = Math.sin(Math.PI * (INPUT_SIZE+off) / 2) + 50;
 					labels.putScalar(new int[] { i, 0, 0 }, d);
 
 				}
 				// Then create the dataset
+				
 				DataSet trainingData = new DataSet(input, labels);
+				pre = new NormalizerMinMaxScaler();
+				pre.fitLabel(true);
+				pre.fit(trainingData);
+				pre.transform(trainingData);
+				
+				//TODO: save the preprocessor -> pre.save(...);
 				// And then train.
+				//System.out.println(trainingData.exampleMeans().getDouble(0));
 				net.fit(trainingData);
 				// I don't know if this has any meaning but we'll see I guess.
 				double score = net.gradientAndScore().getRight();
@@ -308,7 +337,7 @@ public class LSTMTrader extends Trader {
 			System.out.println("Initial training ended.");
 			
 			// We will save once before we return.
-			saveNet();
+			//saveNet();
 		}
 	}
 	

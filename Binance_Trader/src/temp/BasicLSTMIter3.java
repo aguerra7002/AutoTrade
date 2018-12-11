@@ -1,7 +1,5 @@
 package temp;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import org.deeplearning4j.datasets.iterator.IteratorDataSetIterator;
@@ -15,33 +13,40 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.ops.impl.indexaccum.IMax;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerMinMaxScaler;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.RmsProp;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 
 
 public class BasicLSTMIter3 {
-
-	// define a sentence to learn.
-    // Add a special character at the beginning so the RNN learns the complete string and ends with the marker.
-	private static final int[] LEARNARR_HARD = {1,2,3,4,5,4,3,2,1,2,3,4,5,4,3,2,1,2,3,4,5,4,3,2,1,2,3,4,5,4,3,2,1,2};
-	private static final int[] LEARNARR_MED = {0,2,4,5,3,1,2,4,5,3,1,2,4,5,3,1,2,4,5,3};
-	private static final int[] LEARNARR_EASY = {0,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1};
 	
-	private static final int[] LEARNARR = LEARNARR_HARD;
+	private static final double[] LEARNARR = new double[60];
 
 	// RNN dimensions
 	private static final int HIDDEN_LAYER_WIDTH = 50;
 	private static final int HIDDEN_LAYER_CONT = 3;
     private static final Random r = new Random(7894);
     // How many inputs we will look at once
-    private static final int INPUT_SIZE = 3;
+    private static final int INPUT_SIZE = LEARNARR.length - 1;
     private static final int NUM_OUTPUT_PREDICTIONS = 1; // Predict for the next 3 timesteps.
-    private static final int INPUT_LAYER_SIZE = LEARNARR.length - INPUT_SIZE - NUM_OUTPUT_PREDICTIONS + 1;
+    private static final int INPUT_LAYER_SIZE = 1;
+    
+    
+    /* !!!!!
+     * 
+     * This OFFSET variable is what is causing problems. High values of offset causes no learning 
+     * to take place, but learning works very well with low offset. 
+     * 
+     * !!!!! */
+    private static final int OFFSET = 50;
     
 	public static void main(String[] args) {
+		
+		for (int i = 0; i < LEARNARR.length; i++) {
+			LEARNARR[i] = Math.sin(Math.PI * (i) / 2) + OFFSET;
+		}
 
 		// some common parameters
 		NeuralNetConfiguration.Builder builder = new NeuralNetConfiguration.Builder();
@@ -64,13 +69,12 @@ public class BasicLSTMIter3 {
 			listBuilder.layer(i, hiddenLayerBuilder.build());
 		}
 
-		// we need to use RnnOutputLayer for our RNN
-		// TODO: Explore different Loss functions and analyze which would be most useful for this 
+		// we need to use RnnOutputLayer for our RNN 
 		RnnOutputLayer.Builder outputLayerBuilder = new RnnOutputLayer.Builder(LossFunction.MSE);
-		// softmax normalizes the output neurons, the sum of all outputs is 1
-		// this is required for our sampleFromDistribution-function
-		outputLayerBuilder.activation(Activation.IDENTITY);
+
+		outputLayerBuilder.activation(Activation.SIGMOID); // Between 0 and 1, as we want.
 		outputLayerBuilder.nIn(HIDDEN_LAYER_WIDTH);
+		
 		// To make predictions, we only would want a hidden layer size of 1.
 		outputLayerBuilder.nOut(NUM_OUTPUT_PREDICTIONS); 
 		listBuilder.layer(HIDDEN_LAYER_CONT, outputLayerBuilder.build());
@@ -85,48 +89,52 @@ public class BasicLSTMIter3 {
 		INDArray input = Nd4j.zeros(INPUT_LAYER_SIZE, INPUT_SIZE, 1);
 		INDArray labels = Nd4j.zeros(INPUT_LAYER_SIZE, NUM_OUTPUT_PREDICTIONS, 1);
 		// loop through our sample-sentence
-		for (int j = 0; j < LEARNARR.length - NUM_OUTPUT_PREDICTIONS - INPUT_SIZE; j++) {
+		for (int j = 0; j < INPUT_LAYER_SIZE; j++) {
 			for (int i = 0; i < INPUT_SIZE; i++) {
 				
-				int currentInt = LEARNARR[j + i];
-				input.putScalar(new int[] { j, i, 0}, currentInt);
-				
+				double d = LEARNARR[j + i];
+				input.putScalar(new int[] { j, i, 0}, d);
 				
 			}
 			for (int i = 0; i < NUM_OUTPUT_PREDICTIONS; i++) {
-				int outInt = LEARNARR[j + i + INPUT_SIZE];
-				labels.putScalar(new int[] { j, i, 0 }, outInt);
+				double out = LEARNARR[j + i + INPUT_SIZE];
+				labels.putScalar(new int[] { j, i, 0 }, out);
 			}
 		}
 		DataSet trainingData = new DataSet(input, labels);
+		NormalizerMinMaxScaler preProc = new NormalizerMinMaxScaler();
+		preProc.fit(trainingData);
+		preProc.transform(trainingData);
+		
 
 		// some epochs
 		for (int epoch = 0; epoch < 500; epoch++) {
 
 			System.out.println("Epoch " + epoch);
-			IteratorDataSetIterator iter = new IteratorDataSetIterator(trainingData.iterator(), INPUT_LAYER_SIZE);
-			for (int i = 0; i < 1; i++) { // TODO: Make this better at batching properly.
-				// train the data
-				net.fit(iter.next());
-				//net.computeGradientAndScore();
-				//System.out.println(trainingData.toString());
-
-				// clear current stance from the last example
-				net.rnnClearPreviousState();
-			}
+			//IteratorDataSetIterator iter = new IteratorDataSetIterator(trainingData.iterator(), INPUT_LAYER_SIZE);
+			//DataSet train = iter.next();
+			//System.out.println(trainingData.toString());
+			net.fit(trainingData);
+			net.rnnClearPreviousState();
+			
 			
 			INDArray testInit = Nd4j.zeros(1,INPUT_SIZE, 1);
 			System.out.print("In: ");
-			int randStart = (int) (Math.random() * 10);
+			//int randStart = (int) (Math.random() * 10);
 			for (int i = 0; i < INPUT_SIZE; i++) {
-				testInit.putScalar(new int[]{0, i, 0}, LEARNARR[randStart + i]);
-				System.out.print(LEARNARR[randStart + i] + " ");
+				testInit.putScalar(new int[]{0, i, 0}, LEARNARR[0 + i]);
+				System.out.print(LEARNARR[0+ i] + " ");
 			}
 			System.out.println();
-			// run one step -> IMPORTANT: rnnTimeStep() must be called, not
-			// output()
+			// Have to make sure we scale the test data.
+			preProc.transform(testInit);
+			//System.out.println(testInit.toString());
+			// run one step -> IMPORTANT: rnnTimeStep() must be called, not output()
 			// the output shows what the net thinks what should come next
 			INDArray output = net.rnnTimeStep(testInit);
+			// Revert the prediction to comprehensible data.
+			//System.out.println(output.toString());
+			preProc.revertLabels(output);
 			String s = output.toString();
 			long out = Math.round(Double.parseDouble(s.substring(1, s.length() - 1)));
 			System.out.println("Out: " + out);
