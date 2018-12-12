@@ -55,7 +55,6 @@ public class MarketFetchAction extends BinanceAction {
 					.setParameter("interval", "1m");
 			
 			if (sampleTimestamp != -1) {
-				System.out.println("Shouldn't be here.");
 				base.setParameter("startTime", sampleTimestamp + "");
 			}
 			// If in test mode we need to get the data from a certain timestamp.

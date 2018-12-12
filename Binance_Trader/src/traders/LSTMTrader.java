@@ -39,6 +39,8 @@ public class LSTMTrader extends Trader {
 	// TODO: Empirically determine this constant. Will affect how much we trade
 	private static final double STD_MARKET_DEVIATION = 0.00001;
 	
+	private static final int AVG_CONSTANT = 8000;
+	
 	// Trade fee percentage
 	private static final double TRADE_FEE_RATE = 0.00075;
 	
@@ -56,7 +58,7 @@ public class LSTMTrader extends Trader {
     private static final int INPUT_LAYER_SIZE = DATA_FETCH_SIZE - INPUT_SIZE - NUM_OUTPUT_PREDICTIONS + 1;
 	
 	private MultiLayerNetwork net;
-	private NormalizerMinMaxScaler pre;
+	//private NormalizerMinMaxScaler pre;
 	
 	/*
 	 *  fPrev is very important, as it will allow us to provide `feedback' to our LSTM. This is really cool 
@@ -89,27 +91,51 @@ public class LSTMTrader extends Trader {
 		JSONArray result = mfa.getResult();
 		JSONArray sub;
 		double[] f = new double[INPUT_SIZE];
-		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE, 1);
+		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE + 1, 1);
 		int test = (int) (Math.random() * 4);
+		double max = Double.MIN_VALUE;
+		double min = Double.MAX_VALUE;
+		double avg = 0;
 		for (int i = 0; i < INPUT_SIZE; i++) {
 			// This ensures we get the most recent data points.
 			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
 			// Uncomment this when ready to test on real data
-			//double d = Double.parseDouble(sub.getString(4));
+			double d = Double.parseDouble(sub.getString(4));
 			// Comment this out when switching to real data
-			double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
+			//double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
 			f[i] = d;
-			toPred.putScalar(new int[]{0, i, 0}, d);
+			if (d > max) {
+				max = d;
+			}
+			if (d < min) {
+				min = d;
+			}
+			avg += d;
 		}
+		avg /= INPUT_SIZE + 1; // Dangerous
+		
+		for (int i = 0; i < INPUT_SIZE; i++) {
+			// This ensures we get the most recent data points.
+			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
+			// Uncomment this when ready to test on real data
+			double d = Double.parseDouble(sub.getString(4));
+			// Comment this out when switching to real data
+			//double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
+			toPred.putScalar(new int[]{0, i, 0}, (d - min) / (max - min));
+		}
+		toPred.putScalar(new int[] {0, INPUT_SIZE, 0}, avg / AVG_CONSTANT);
 		// Transform it before making our prediction
-		pre.transform(toPred);
+		//pre.transform(toPred);
 		
 		// Then feed this to the existing model, get a predicted price output.
 		// Note that the model is already trained, so this should save a lot of time compared with other methods.
 		INDArray output = net.output(toPred);
-		pre.revertLabels(output);
+		//pre.revertLabels(output);
 		String s = output.toString();
+		System.out.println(s);
 		double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
+		// Don't forget to untransform it
+		f_pred = f_pred * (max - min) + min;
 		System.out.println("Current Price: " + Math.round(f[f.length - 1]) +"    Predicted price: " + f_pred);
 		
 		// Trade based on the predicted price (Same as other trader)
@@ -166,6 +192,8 @@ public class LSTMTrader extends Trader {
 		
 	}
 	
+	
+	//TODO: Make sure we normalize our data before we add this back in.
 	private void finishTrain(double[] f) {
 		// Finally, the unique step. Use the current price paired with the previous
 		// price to get the error so we can fit and backpropagate
@@ -256,7 +284,7 @@ public class LSTMTrader extends Trader {
 			// first difference, for rnns we need to use LSTM.Builder
 			for (int i = 0; i < HIDDEN_LAYER_CONT; i++) {
 				LSTM.Builder hiddenLayerBuilder = new LSTM.Builder();
-				hiddenLayerBuilder.nIn(i == 0 ? INPUT_SIZE : HIDDEN_LAYER_WIDTH);
+				hiddenLayerBuilder.nIn(i == 0 ? INPUT_SIZE + 1 : HIDDEN_LAYER_WIDTH);
 				hiddenLayerBuilder.nOut(HIDDEN_LAYER_WIDTH);
 				// adopted activation function from LSTMCharModellingExample
 				// seems to work well with RNNs
@@ -293,38 +321,69 @@ public class LSTMTrader extends Trader {
 			System.out.println("Training started...");
 			
 			for (int k = 0; k < epochs; k++) {
-				INDArray input = Nd4j.zeros(trainDataPoints, INPUT_SIZE, 1);
+				INDArray input = Nd4j.zeros(trainDataPoints, INPUT_SIZE + 1, 1);
 				INDArray labels = Nd4j.zeros(trainDataPoints, NUM_OUTPUT_PREDICTIONS, 1);
 				for (int i = 0; i < trainDataPoints; i++) {
 					long randTime = (long) (r.nextDouble() * oneMonthMillis) + beginRange;
 					//System.out.println(randTime);
 					mfa.setSampleTimestamp(randTime);
-					//JSONArray result = mfa.getResult();
+					JSONArray result = mfa.getResult();
 					JSONArray sub;
 					int off = (int) (Math.random() * 4);
-					for (int j = 0; j < INPUT_SIZE; j++) {
-						//sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
-						// Uncomment this when ready to test on real data
-						//double d = Double.parseDouble(sub.getString(4));
-						double d = Math.sin(Math.PI * (j + off) / 2) + 50;
-						// Put the last runs data as the input
-						input.putScalar(new int[] { i, j, 0 }, d);
-					}
+					
+					// First handle labels
 					// Put the current label as the ground truth label
 					//sub = result.getJSONArray(result.length() - NUM_OUTPUT_PREDICTIONS);
 					// Uncomment this when ready to test on real data
 					//double d = Double.parseDouble(sub.getString(4));
-					double d = Math.sin(Math.PI * (INPUT_SIZE+off) / 2) + 50;
-					labels.putScalar(new int[] { i, 0, 0 }, d);
+					double dLab = Math.sin(Math.PI * (INPUT_SIZE+off) / 2) + 50;
+					
+					
+					// Then handle inputs
+					double avg = dLab;
+					double max = dLab;
+					double min = dLab;
+					for (int j = 0; j < INPUT_SIZE; j++) {
+						sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
+						// Uncomment this when ready to test on real data
+						double d = Double.parseDouble(sub.getString(4));
+						//double d = Math.sin(Math.PI * (j + off) / 2) + 50;
+						if (d > max) {
+							max = d;
+						} 
+						if (d < min) {
+							min = d;
+						}
+						avg += d;
+						
+						
+					}
+					avg /= INPUT_SIZE + 1; // +1 is dangerous.
+					
+					// Now actually put the label
+					labels.putScalar(new int[] { i, 0, 0 }, (dLab - min) / (max - min));
+					
+					// Here we scale the data accordingly and add it to inputs.
+					for (int j = 0; j < INPUT_SIZE; j++) {
+						
+						sub = result.getJSONArray(result.length() - INPUT_SIZE + j);
+						double d = Double.parseDouble(sub.getString(4));
+						//double d = Math.sin(Math.PI * (j + off) / 2) + 50;
+						// Put the last runs data as the input
+						input.putScalar(new int[] { i, j, 0 }, (d - min) / (max - min) );
+					}
+					// Because we lost some info with scaling, we add it back with the avg.
+					input.putScalar(new int[] {i,  INPUT_SIZE, 0}, avg / AVG_CONSTANT);
+		
 
 				}
 				// Then create the dataset
 				
 				DataSet trainingData = new DataSet(input, labels);
-				pre = new NormalizerMinMaxScaler();
-				pre.fitLabel(true);
-				pre.fit(trainingData);
-				pre.transform(trainingData);
+				//pre = new NormalizerMinMaxScaler();
+				//pre.fitLabel(true);
+				//pre.fit(trainingData);
+				//pre.transform(trainingData);
 				
 				//TODO: save the preprocessor -> pre.save(...);
 				// And then train.
@@ -337,7 +396,7 @@ public class LSTMTrader extends Trader {
 			System.out.println("Initial training ended.");
 			
 			// We will save once before we return.
-			//saveNet();
+			saveNet();
 		}
 	}
 	
