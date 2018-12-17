@@ -37,8 +37,8 @@ public class TradeRun {
 		hub.setValue(1000d, 0d);
 		
 		// Starts the web server so we can see our results online.
-		//WebServer server = new WebServer();
-		//server.startServer();
+		WebServer server = new WebServer();
+		server.startServer();
 		
 		// Get the program okay to shutdown gracefully
 		setupProgramClose(null, lstm);
