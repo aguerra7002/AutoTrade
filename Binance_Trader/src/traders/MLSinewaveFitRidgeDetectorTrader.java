@@ -210,7 +210,10 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			oa.execute();
 			System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			// Now that the order has executed, update our Vals for use in the next iteration.
-			hub.setValue(usdVal - toTradeVal, targetCryptoVal);
+			double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
+			double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
+			hub.setValue(finUsdVal, finCryptVal);
+			//TODO: When using real money, have something to get real balance as opposed to calculating it.
 			System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
 			// CSV writing stuff
 			if (shouldWriteToCSV) addCSVEntry(mfa.getCurrentPrice(), hub.getValue(), hub.getUSDValue(), difference, "Y", f);
