@@ -36,8 +36,8 @@ public class RidgeDetector extends Trader {
 	
 	private static double lastRidge = -1;
 
-	public RidgeDetector(boolean isTestMode) {
-		super(UPDATE_RATE_SEC, isTestMode);
+	public RidgeDetector() {
+		super(UPDATE_RATE_SEC);
 		
 		// Logging setup
 		ridgeLogger = new Logger();

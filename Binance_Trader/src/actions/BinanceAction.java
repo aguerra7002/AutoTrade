@@ -43,4 +43,8 @@ public abstract class BinanceAction {
 		testMode = isTestMode;
 	}
 	
+	public static boolean getTestMode() {
+		return testMode;
+	}
+	
 }

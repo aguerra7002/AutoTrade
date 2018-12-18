@@ -32,7 +32,7 @@ public class OrderAction extends BinanceAction {
 	String result;
 	
 	public OrderAction(String symbol, boolean isBuyOrder, String type, double qty) {
-		super("v3/api/order/test");
+		super(testMode ? "v3/api/order/test" : "v3/api/order");
 		orderType = type;
 		side = isBuyOrder ? "BUY" : "SELL";
 		orderQty = qty;

@@ -30,6 +30,7 @@ import org.nd4j.linalg.schedule.ScheduleType;
 import API.Constants;
 import actions.MarketFetchAction;
 import actions.OrderAction;
+import actions.UserDataFetchAction;
 import balance.BalanceHub;
 
 public class LSTMTrader extends Trader {
@@ -69,8 +70,8 @@ public class LSTMTrader extends Trader {
 	private double[] fPrev = new double[INPUT_SIZE];
 	private boolean firstRun = true;
 	
-	public LSTMTrader(boolean isTestMode) {
-		super(UPDATE_RATE_SEC, isTestMode);
+	public LSTMTrader() {
+		super(UPDATE_RATE_SEC);
 		// TODO Auto-generated constructor stub
 		initTrainNetwork();
 		
@@ -188,10 +189,15 @@ public class LSTMTrader extends Trader {
 		System.out.println(
 				"Order executed, traded " + toTradeQty + " at " + new Date()/* + " Result: " + oa.getResult() */);
 		// Now that the order has executed, update our Vals for use in the next iteration.
-		double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
-		double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
-		hub.setValue(finUsdVal, finCryptVal);
-		//TODO: When using real money, have something to get real balance as opposed to calculating it.
+		if (testMode) {
+			double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
+			double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
+			hub.setValue(finUsdVal, finCryptVal);
+		} else { 
+			// If not testing, we don't put the theoretical values. Rather, we put whatever we actually have to maintain accuracy.
+			UserDataFetchAction udfa = new UserDataFetchAction();
+			hub.setValue(udfa.getNewestBal("USDT"), udfa.getNewestBal("BTC"));
+		}
 		System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
 		//finishTrain(f);
 		

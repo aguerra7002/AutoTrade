@@ -34,7 +34,7 @@ public class Test {
 //		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
 //		double density = tfa.getTradeDensity();
 //		System.out.println(density);
-		RidgeDetector trader = new RidgeDetector(true);
+		RidgeDetector trader = new RidgeDetector();
 		trader.begin();
 
 

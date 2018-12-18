@@ -1,7 +1,9 @@
 package API;
 
+import actions.BinanceAction;
 import actions.MarketFetchAction;
 import actions.SetupAction;
+import actions.UserDataFetchAction;
 import balance.BalanceHub;
 import server.WebServer;
 import traders.LSTMTrader;
@@ -15,14 +17,19 @@ import traders.RidgeDetector;
  */
 public class TradeRun {
 
-
+	private static boolean testing = true;
+	
 	public static void main(String[] args) {
 		
+		// Important: first specify to the program whether testing or not. 
+		// This is currently done thru BinanceAction.
+		BinanceAction.setTestMode(testing);
+		
 		//MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
-		//RidgeDetector trader1 = new RidgeDetector(true);
+		//RidgeDetector trader1 = new RidgeDetector();
 		
 		// LSTM Trader
-		LSTMTrader lstm = new LSTMTrader(true);
+		LSTMTrader lstm = new LSTMTrader();
 		
 		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
 		//sa.getMinQty();
@@ -34,14 +41,24 @@ public class TradeRun {
 		
 		// Stores balances.
 		BalanceHub hub = BalanceHub.getInstance();
-		hub.setValue(1000d, 0d);
+		//TODO: Get the real balance from binance.
+		if (testing) {
+			hub.setValue(1000d, 0d);
+		} else {
+			UserDataFetchAction udfa = new UserDataFetchAction();
+			hub.setValue(udfa.getNewestBal("USDT"), udfa.getNewestBal("BTC"));
+		}
+		
 		
 		// Starts the web server so we can see our results online.
-		WebServer server = new WebServer();
-		server.startServer();
+		//WebServer server = new WebServer();
+		//server.startServer();
 		
 		// Get the program okay to shutdown gracefully
 		setupProgramClose(null, lstm);
+		
+		UserDataFetchAction udfa = new UserDataFetchAction();
+		System.out.println(udfa.getNewestBal("BTC"));
 		
 		// Starts the trader. Very complex
 		//trader.begin();

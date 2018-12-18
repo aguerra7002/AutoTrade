@@ -7,6 +7,7 @@ import org.json.JSONArray;
 import API.Constants;
 import actions.MarketFetchAction;
 import actions.OrderAction;
+import actions.UserDataFetchAction;
 import balance.BalanceHub;
 import logging.Logger;
 import multithreading.ThreadCompleteListener;
@@ -60,7 +61,7 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 	Logger logger;
 	
 	public MLSinewaveFitRidgeDetectorTrader(boolean writeToCSV) {
-		super(UPDATE_RATE, true); // true indicates we are testing.
+		super(UPDATE_RATE); // true indicates we are testing.
 		
 		shouldWriteToCSV = writeToCSV;
 		firstRun = true;
@@ -210,9 +211,15 @@ public class MLSinewaveFitRidgeDetectorTrader extends Trader implements ThreadCo
 			oa.execute();
 			System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			// Now that the order has executed, update our Vals for use in the next iteration.
-			double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
-			double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
-			hub.setValue(finUsdVal, finCryptVal);
+			if (testMode) {
+				double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
+				double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
+				hub.setValue(finUsdVal, finCryptVal);
+			} else { 
+				// If not testing, we don't put the theoretical values. Rather, we put whatever we actually have to maintain accuracy.
+				UserDataFetchAction udfa = new UserDataFetchAction();
+				hub.setValue(udfa.getNewestBal("USDT"), udfa.getNewestBal("BTC"));
+			}
 			//TODO: When using real money, have something to get real balance as opposed to calculating it.
 			System.out.println("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
 			// CSV writing stuff

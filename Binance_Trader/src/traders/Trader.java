@@ -32,9 +32,9 @@ public abstract class Trader implements Runnable {
 	// To execute all our tasks.
 	ScheduledExecutorService executor;
 	
-	public Trader(int updateRateSecs, boolean isTestMode) {
+	public Trader(int updateRateSecs) {
 		this.updateRateSec = updateRateSecs;
-		testMode = isTestMode;
+		testMode = BinanceAction.getTestMode();
 		BinanceAction.setTestMode(testMode);
 		if (testMode) {
 			// Set default timestamp
