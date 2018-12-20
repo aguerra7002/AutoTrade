@@ -16,8 +16,16 @@ import traders.RidgeDetector;
  * @author alexg
  */
 public class TradeRun {
-
+	
+	
+	/*
+	 * 
+	 * IMPORTANT - This variable determines  whether or not we actually trade. It is very important that this be 
+	 * handled carefully.
+	 * 
+	 */
 	private static boolean testing = true;
+	
 	
 	public static void main(String[] args) {
 		

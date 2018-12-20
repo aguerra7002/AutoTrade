@@ -93,7 +93,7 @@ public class RidgeDetector extends Trader {
 				// The amount we buy will deplete all our usd value, we are putting it all into crypto
 				double toTradeQty = hub.getUSDValue() / mfa.getCurrentPrice();
 				// Do the order at market price to get it done asap
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, OrderAction.MARKET_ORDER, toTradeQty);
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, true, OrderAction.MARKET_ORDER, toTradeQty, -1d);
 				oa.execute();
 				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			} else {
@@ -102,7 +102,7 @@ public class RidgeDetector extends Trader {
 				// We just want to sell the qty of crypto we have, convert all to usd.
 				double toTradeQty = hub.getCryptoQty();
 				// Do the order at market price to get it done asap
-				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, OrderAction.MARKET_ORDER, toTradeQty);
+				OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, false, OrderAction.MARKET_ORDER, toTradeQty, -1d);
 				oa.execute();
 				System.out.println("Order executed, traded " + toTradeQty  + " at " + new Date()/*+ " Result: " + oa.getResult()*/);
 			}

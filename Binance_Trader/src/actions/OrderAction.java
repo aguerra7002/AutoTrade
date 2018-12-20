@@ -3,12 +3,14 @@ package actions;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashSet;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
@@ -23,19 +25,28 @@ public class OrderAction extends BinanceAction {
 	public static final String MARKET_ORDER = "MARKET";
 	public static final String LIMIT_ORDER = "LIMIT";
 
-	String orderID;
+	String orderID = null;
 	String orderSymbol;
 	double orderQty;
+	double orderPrice;
 	String side;
 	String orderType;
 	// This is updated when execute is called.
 	String result;
 	
-	public OrderAction(String symbol, boolean isBuyOrder, String type, double qty) {
-		super(testMode ? "v3/api/order/test" : "v3/api/order");
+	// Static variable to keep track of all orders over all OrderActions
+	private static HashSet<String> activeOrders = new HashSet<String>();
+	private static long orderNum = 0;
+	
+	private static final String ENDPOINT = "v3/api/order";
+	private static final String ENDPOINT_TEST = "v3/api/order/test";
+	
+	public OrderAction(String symbol, boolean isBuyOrder, String type, double qty, double price) {
+		super(testMode ? ENDPOINT_TEST : ENDPOINT);
 		orderType = type;
 		side = isBuyOrder ? "BUY" : "SELL";
 		orderQty = qty;
+		orderPrice = price;
 		orderSymbol = symbol;
 	}
 
@@ -46,16 +57,31 @@ public class OrderAction extends BinanceAction {
 	public void execute() {
 
 		try {
-			URI sellUri = new URIBuilder(location)
+			URIBuilder sellUriBuilder = new URIBuilder(location)
 					.setParameter("symbol", orderSymbol)
 					.setParameter("side", side)
 					.setParameter("type", orderType)
-				//	.setParameter("timeInForce", "GTC")
-					.setParameter("quantity", orderQty + "")
-					.setParameter("newOrderRespType", "RESULT")
+					.setParameter("timeInForce", "GTC")
+					.setParameter("quantity", orderQty + "");
+			
+			if (orderType.equals(LIMIT_ORDER)) {
+				sellUriBuilder = sellUriBuilder.setParameter("price", orderPrice + "");
+			}
+			
+			if (orderID != null) {
+				sellUriBuilder = sellUriBuilder.setParameter("newClientOrderId", orderID);
+			} else { //TODO: Get rid of this else clause, its not really necessary at all.
+				orderID = orderNum + "";
+				sellUriBuilder = sellUriBuilder.setParameter("newClientOrderId", orderID);
+				orderID = null;
+			}
+			
+			URI sellUri = sellUriBuilder.setParameter("newOrderRespType", "RESULT")
 					.setParameter("recvWindow", "5000")
 					.setParameter("timestamp", Long.toString(System.currentTimeMillis()))
 					.build();
+			
+			
 
 			String queryString1 = sellUri.toString().substring(sellUri.toString().indexOf('?') + 1);
 
@@ -64,8 +90,9 @@ public class OrderAction extends BinanceAction {
 			URI sellUriSigned = new URIBuilder(sellUri).setParameter("signature", signature).build();
 
 			String queryString = sellUriSigned.toString().substring(sellUriSigned.toString().indexOf('?') + 1);
-
-			HttpPost httppost = new HttpPost("https://api.binance.com/api/v3/order/test");
+			
+			String finalEndpoint = BASE_ENDPOINT + (testMode ? ENDPOINT_TEST : ENDPOINT);
+			HttpPost httppost = new HttpPost(finalEndpoint);
 			httppost.setHeader(Constants.KEY_HEADER, Constants.PUBLIC_KEY);
 			httppost.setHeader("Content-Type", Constants.CONTENT_TYPE + "; " + Constants.ENCODING);
 			StringEntity se = new StringEntity(queryString);
@@ -75,6 +102,10 @@ public class OrderAction extends BinanceAction {
 
 			HttpResponse response = client.execute(httppost); // THE "CRUX" STEP
 			result = parseServerResponse(response);
+			
+			System.out.println(result);
+			
+			orderNum++;
 
 		} catch (URISyntaxException e) {
 
@@ -88,8 +119,6 @@ public class OrderAction extends BinanceAction {
 
 			e.printStackTrace();
 		}
-		// If something goes terribly wrong
-		//return null;
 	}
 
 	@Override
@@ -110,6 +139,10 @@ public class OrderAction extends BinanceAction {
 		}
 
 		return content;
+	}
+	
+	public static void orderCancelled(String orderID) {
+		activeOrders.remove(orderID);
 	}
 	
 	public String getResult() {

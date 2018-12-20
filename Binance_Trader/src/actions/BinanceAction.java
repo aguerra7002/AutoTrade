@@ -5,7 +5,7 @@ import java.net.URISyntaxException;
 
 public abstract class BinanceAction {
 	
-	private static final String BASE_ENDPOINT = "https://api.binance.com/";
+	protected static final String BASE_ENDPOINT = "https://api.binance.com/";
 	protected URI location;
 	
 //	// This is June 1, 2018. Probably fine.

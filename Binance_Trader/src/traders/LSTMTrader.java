@@ -184,7 +184,7 @@ public class LSTMTrader extends Trader {
 		boolean isBuyOrder = toTradeVal > 0 ? true : false;
 		// Create the OrderAction object. Note that we want limit order to avoid bad trading
 		OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, OrderAction.LIMIT_ORDER,
-				toTradeQty);
+				toTradeQty, f[f.length - 1]);
 		oa.execute();
 		System.out.println(
 				"Order executed, traded " + toTradeQty + " at " + new Date()/* + " Result: " + oa.getResult() */);
