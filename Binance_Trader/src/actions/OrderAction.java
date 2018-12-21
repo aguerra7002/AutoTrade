@@ -38,8 +38,8 @@ public class OrderAction extends BinanceAction {
 	private static HashSet<String> activeOrders = new HashSet<String>();
 	private static long orderNum = 0;
 	
-	private static final String ENDPOINT = "v3/api/order";
-	private static final String ENDPOINT_TEST = "v3/api/order/test";
+	private static final String ENDPOINT = "api/v3/order";
+	private static final String ENDPOINT_TEST = "api/v3/order/test";
 	
 	public OrderAction(String symbol, boolean isBuyOrder, String type, double qty, double price) {
 		super(testMode ? ENDPOINT_TEST : ENDPOINT);
@@ -61,11 +61,11 @@ public class OrderAction extends BinanceAction {
 					.setParameter("symbol", orderSymbol)
 					.setParameter("side", side)
 					.setParameter("type", orderType)
-					.setParameter("timeInForce", "GTC")
 					.setParameter("quantity", orderQty + "");
 			
 			if (orderType.equals(LIMIT_ORDER)) {
-				sellUriBuilder = sellUriBuilder.setParameter("price", orderPrice + "");
+				sellUriBuilder = sellUriBuilder.setParameter("timeInForce", "GTC")
+												.setParameter("price", orderPrice + "");
 			}
 			
 			if (orderID != null) {
@@ -88,15 +88,14 @@ public class OrderAction extends BinanceAction {
 			String signature = SignatureFactory.generateHMACSHA256Signature(Constants.PRIVATE_KEY, queryString1);
 
 			URI sellUriSigned = new URIBuilder(sellUri).setParameter("signature", signature).build();
-
-			String queryString = sellUriSigned.toString().substring(sellUriSigned.toString().indexOf('?') + 1);
-			
+		
 			String finalEndpoint = BASE_ENDPOINT + (testMode ? ENDPOINT_TEST : ENDPOINT);
+			
 			HttpPost httppost = new HttpPost(finalEndpoint);
 			httppost.setHeader(Constants.KEY_HEADER, Constants.PUBLIC_KEY);
 			httppost.setHeader("Content-Type", Constants.CONTENT_TYPE + "; " + Constants.ENCODING);
-			StringEntity se = new StringEntity(queryString);
-			httppost.setEntity(se);
+
+			httppost.setURI(sellUriSigned);
 
 			HttpClient client = HttpClients.createDefault();
 

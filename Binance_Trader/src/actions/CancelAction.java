@@ -25,7 +25,7 @@ public class CancelAction extends BinanceAction {
 	String result;
 	
 	public CancelAction(String symbol, String orderID) {
-		super("v3/api/order");
+		super("api/v3/order");
 		orderSymbol = symbol;
 		this.orderID = orderID;
 	}
@@ -39,7 +39,7 @@ public class CancelAction extends BinanceAction {
 		try {
 			URI cancelUri = new URIBuilder(location)
 					.setParameter("symbol", orderSymbol)
-					.setParameter("orderId", orderID)
+					.setParameter("origClientOrderId", orderID)
 					.setParameter("timestamp", Long.toString(System.currentTimeMillis()))
 					.build();
 

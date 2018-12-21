@@ -35,8 +35,8 @@ import balance.BalanceHub;
 
 public class LSTMTrader extends Trader {
 	
-	// Trade at least a dollars worth of stuff, otherwise not worth it.
-	private static final double MIN_TRADE_VALUE_THRESHOLD = 1;
+	// Trade at least 10 dollars worth of stuff to not violate MIN_NOTIONAL, otherwise not worth it.
+	private static final double MIN_TRADE_VALUE_THRESHOLD = 10;
 	// TODO: Empirically determine this constant. Will affect how much we trade
 	private static final double STD_MARKET_DEVIATION = 0.00001;
 	

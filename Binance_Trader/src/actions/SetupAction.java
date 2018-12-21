@@ -60,7 +60,7 @@ public class SetupAction extends BinanceAction {
 			if (temp.get("symbol").equals(Constants.BTC_USDT_MARKET_SYMBOL)) {
 				JSONArray filters = temp.getJSONArray("filters");
 				//System.out.println(filters);
-				minQty = Double.parseDouble(filters.getJSONObject(1).getString("minQty"));
+				//minQty = Double.parseDouble(filters.getJSONObject(1).getString("minQty"));
 			}
 		}
 		//System.out.println(minQty);
