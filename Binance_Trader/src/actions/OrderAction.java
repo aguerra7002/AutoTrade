@@ -4,16 +4,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.ParseException;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
@@ -73,6 +72,7 @@ public class OrderAction extends BinanceAction {
 			} else { //TODO: Get rid of this else clause, its not really necessary at all.
 				orderID = orderNum + "";
 				sellUriBuilder = sellUriBuilder.setParameter("newClientOrderId", orderID);
+				activeOrders.add(orderID);
 				orderID = null;
 			}
 			
@@ -105,6 +105,7 @@ public class OrderAction extends BinanceAction {
 			System.out.println(result);
 			
 			orderNum++;
+			
 
 		} catch (URISyntaxException e) {
 
@@ -142,6 +143,10 @@ public class OrderAction extends BinanceAction {
 	
 	public static void orderCancelled(String orderID) {
 		activeOrders.remove(orderID);
+	}
+	
+	public static Iterator<String> getOrders() {
+		return activeOrders.iterator();
 	}
 	
 	public String getResult() {

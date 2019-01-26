@@ -4,10 +4,14 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import org.apache.http.client.ClientProtocolException;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
+import org.deeplearning4j.util.ModelSerializer;
+import org.json.JSONArray;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
-import actions.SetupAction;
-import balance.BalanceHub;
-import traders.RidgeDetector;
+import actions.MarketFetchAction;
+import logging.Logger;
 
 
 
@@ -19,12 +23,12 @@ public class Test {
 	
 	
 	public static void main(String[] args) throws ClientProtocolException, IOException, URISyntaxException {
-		SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
-		sa.getMinQty();
+		//SetupAction sa = new SetupAction(Constants.BTC_USDT_MARKET_SYMBOL);
+		//sa.getMinQty();
 		//MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 1);
 		//System.out.println("Starting trading... Start Price: " + mfa.getCurrentPrice());
-		BalanceHub hub = BalanceHub.getInstance();
-		hub.setValue(1000d, 0d);
+		//BalanceHub hub = BalanceHub.getInstance();
+		//hub.setValue(1000d, 0d);
 		//WebServer server = new WebServer();
 		//server.startServer();
 		//MLSinewaveFitRidgeDetectorTrader trader = new MLSinewaveFitRidgeDetectorTrader(true);
@@ -34,9 +38,81 @@ public class Test {
 //		TradeFetchAction tfa = new TradeFetchAction(Constants.BTC_USDT_MARKET_SYMBOL);
 //		double density = tfa.getTradeDensity();
 //		System.out.println(density);
-		RidgeDetector trader = new RidgeDetector();
-		trader.begin();
-
+		//RidgeDetector trader = new RidgeDetector();
+		//trader.begin();
+		int INPUT_SIZE = 59;
+		Logger log = new Logger();
+		log.addFile("rnnout", true);
+		MarketFetchAction mfa = new MarketFetchAction(Constants.BTC_USDT_MARKET_SYMBOL, 60);
+		// TODO: Adjust MFA so we can get a certain amount of data as opposed to just being at its mercy.
+		JSONArray result = mfa.getResult();
+		JSONArray sub;
+		double[] f = new double[INPUT_SIZE];
+		INDArray toPred = Nd4j.zeros(1,INPUT_SIZE + 1, 1);
+		double max = Double.MIN_VALUE;
+		double min = Double.MAX_VALUE;
+		double avg = 0;
+		for (int i = 0; i < INPUT_SIZE; i++) {
+			// This ensures we get the most recent data points.
+			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
+			// Uncomment this when ready to test on real data
+			double d = Double.parseDouble(sub.getString(4));
+			log.addLineToFile(new StringBuilder("" + d), "rnnout");
+			// Comment this out when switching to real data
+			//double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
+			f[i] = d;
+			if (d > max) {
+				max = d;
+			}
+			if (d < min) {
+				min = d;
+			}
+			avg += d;
+		}
+		avg /= INPUT_SIZE;
+		
+		for (int i = 0; i < INPUT_SIZE; i++) {
+			// This ensures we get the most recent data points.
+			sub = result.getJSONArray(result.length() - INPUT_SIZE + i);
+			// Uncomment this when ready to test on real data
+			double d = Double.parseDouble(sub.getString(4));
+			// Comment this out when switching to real data
+			//double d = Math.sin(Math.PI * (i + test) / 2) + 50; // Simple oscillating from 0 -> 1 -> 0 -> -1
+			d = (d - min) / (max - min);
+			f[i] = d;
+			toPred.putScalar(new int[]{0, i, 0}, d);
+		}
+		//toPred.putScalar(new int[] {0, INPUT_SIZE, 0}, avg / 10000);
+		toPred.putScalar(new int[] {0,  INPUT_SIZE , 0}, (max - min) / 100);
+		// Transform it before making our prediction
+		//pre.transform(toPred);
+		
+		// Then feed this to the existing model, get a predicted price output.
+		// Note that the model is already trained, so this should save a lot of time compared with other methods.
+		MultiLayerNetwork net = ModelSerializer.restoreMultiLayerNetwork("model.zip", true);
+		net.rnnClearPreviousState();
+		
+		for (int i = 0; i < 100; i++) {
+			//INDArray output = net.output(toPred);
+			INDArray output = net.rnnTimeStep(toPred);
+			//pre.revertLabels(output);
+			String s = output.toString();
+			//System.out.println(s);
+			double f_pred = Double.parseDouble(s.substring(1, s.length() - 1));
+			
+			// Update the array we predict with
+			for (int j = 0; j < INPUT_SIZE - 1; j++) {
+				f[j] = f[j+1];
+				toPred.putScalar(new int[] {0, j, 0} , f[j]);
+			}
+			f[INPUT_SIZE - 1] = f_pred;
+			toPred.putScalar(new int[] {0,  INPUT_SIZE - 1, 0}, f_pred);
+			
+			// Don't forget to untransform it for logging...
+			f_pred = f_pred * (max - min) + min;
+			log.addLineToFile(new StringBuilder("" + f_pred), "rnnout");
+		}
+		
 
 		
 		// ****************** BELOW IS OLD STUFF ***************************

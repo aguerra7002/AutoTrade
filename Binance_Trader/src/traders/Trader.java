@@ -1,11 +1,16 @@
 package traders;
 
-import java.util.Date;
+import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import API.Constants;
 import actions.BinanceAction;
+import actions.CancelAction;
+import actions.OrderAction;
+import actions.UserDataFetchAction;
+import balance.BalanceHub;
 
 /* This class handles all the timing/ update stuff for the trader
  * but still leaves a lot to be done in the individual traders which
@@ -77,6 +82,16 @@ public abstract class Trader implements Runnable {
 	
 	@Override
 	public void run() {
+		 // This run() method is only called when we are not testing. 
+		 // It is important that here, we cancel all orders before trying to create a new one
+		// TODO: Maybe put this in OrderAction?
+		Iterator<String> orders = OrderAction.getOrders();
+		while (orders.hasNext()) {
+			CancelAction ca = new CancelAction(Constants.BTC_USDT_MARKET_SYMBOL, orders.next());
+			ca.execute();
+		}
+		
+		// Now we can go ahead and potentially make a new order
 		update();
 	}
 	
