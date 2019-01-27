@@ -141,65 +141,10 @@ public class LSTMTrader extends Trader {
 		f_pred = f_pred * (max - min) + min;
 		System.out.println("Current Price: " + f[f.length - 1] +"    Predicted price: " + Math.round(f_pred * 100d) / 100d);
 		
-		// Trade based on the predicted price (Same as other trader)
-		// Then find the difference between the new estimate and the last known val
-		double difference = f_pred - f[f.length - 1];
-		// Now, get the optimal balance given the difference.
-		BalanceHub hub = BalanceHub.getInstance();
-		double balanceRisk = calcRiskForCrypto(difference);
-		// Get the usd value of our balance.
-		double usdVal = hub.getUSDValue();
-		// And get the crypto Val.
-		double cryptoVal = hub.getCryptoValue();
-		// Now, we want to find our target valuation so we can calculate the difference and trade.
-		double targetCryptoVal = (usdVal + cryptoVal) * balanceRisk;
-		// Also want to get target USD Val as it will be useful for fee calculations
-		double targetUSDVal = (usdVal + cryptoVal) - targetCryptoVal;
-		// Find the difference between our target
-		double toTradeVal = targetCryptoVal - cryptoVal;
-		// If it tells us to trade an insignificant amount, then just stop.
-
-		if (Math.abs(toTradeVal) < MIN_TRADE_VALUE_THRESHOLD) {
-			/* TODO: Add logging to this */
-			// We don't want to do an order but we still want to train our network, so do this b4 returning
-			//finishTrain(f);
-			return;
-		}
-
-		// This is an expression that calculates what our predicted profit is without accounting for trading fees.
-		double predictedGrossProfit = (targetUSDVal - usdVal) + (f_pred - f[f.length - 1]) * (targetCryptoVal - cryptoVal);
-		double fees = toTradeVal * TRADE_FEE_RATE;
-		// See if the fees put us in the red, if they do, then don't trade
-		if (predictedGrossProfit - fees <= 0) {
-			/* TODO: Add logging to this */
-			// We don't want to do an order but we still want to train our network, so do this b4 returning
-			//finishTrain(f);
-			return;
-		}
-		// If we made it here, then we are going through with the trade...
-
-		// Now we want to carry out the trade. First, get the amount necessary needed to buy/sell.
-		double toTradeQty = Math.abs(((double) ((int) (1000000d * toTradeVal / mfa.getCurrentPrice()))) / 1000000d);
-		// Determine to buy or sell.
-		boolean isBuyOrder = toTradeVal > 0 ? true : false;
-		// Create the OrderAction object. Note that we want limit order to avoid bad trading
-		OrderAction oa = new OrderAction(Constants.BTC_USDT_MARKET_SYMBOL, isBuyOrder, OrderAction.LIMIT_ORDER,
-				toTradeQty, f[f.length - 1]);
-		oa.execute();
-		System.out.println(
-				"Order executed, traded " + toTradeQty + " at " + new Date()/* + " Result: " + oa.getResult() */);
-		// Now that the order has executed, update our Vals for use in the next iteration.
-		if (testMode) {
-			double finUsdVal = usdVal - (toTradeVal * (1 - TRADE_FEE_RATE));
-			double finCryptVal = cryptoVal + (toTradeVal * (1 - TRADE_FEE_RATE));
-			hub.setValue(finUsdVal, finCryptVal);
-			System.out.print("Total Value: " + hub.getValue() + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoQty());
-		} else {
-			// If not testing, we don't put the theoretical values. Rather, we put whatever we actually have to maintain accuracy.
-			UserDataFetchAction udfa = new UserDataFetchAction();
-			BalanceHub.getInstance().setValue(udfa.getNewestBal("USDT"), udfa.getNewestBal("BTC"));
-			System.out.print("Total Value: " + (hub.getValue() + toTradeVal) + "   USD: " + hub.getUSDValue() + "   Crypto: " + hub.getCryptoValue() + "  Trading: " + toTradeVal);
-		}
+		int res = tradeGivenPredictedPrice(f_pred, f[f.length - 1], mfa);
+		
+		// Use result here for logging 
+		
 		
 		//finishTrain(f);
 		
